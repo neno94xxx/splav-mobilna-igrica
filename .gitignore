@@ -1,0 +1,51 @@
+# Godot cache and generated imports
+.godot/
+.mono/
+*.translation
+
+# Portable local tools and generated game outputs
+.tools/
+builds/
+artifacts/
+tmp/
+*.partial
+*.apk
+*.aab
+
+# Android and Gradle caches
+.gradle/
+**/build/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# Local secrets and signing keys
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+
+# Node tooling
+node_modules/
+
+# IDE and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs, temporary files and editor backups
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# Local screenshot from setup/troubleshooting
+/godot.png
+/godot.png.import
