@@ -1,0 +1,34 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/nerd_parts_cutout.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/nerd parts/body2_optimized_v1.webp" id="2_body"]
+[ext_resource type="Texture2D" path="res://assets/nerd parts/hammer_optimized_v1.webp" id="3_hammer"]
+[ext_resource type="Texture2D" path="res://assets/nerd parts/head_optimized_v1.webp" id="4_head"]
+
+[node name="NerdPartsCutout" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="BodyBreathPivot" type="Node2D" parent="."]
+position = Vector2(-20, 120)
+
+[node name="Body" type="Sprite2D" parent="BodyBreathPivot"]
+position = Vector2(0, -55)
+scale = Vector2(0.5252405, 0.5252405)
+texture = ExtResource("2_body")
+
+[node name="HammerPivot" type="Node2D" parent="."]
+position = Vector2(51.204, -41.232)
+
+[node name="HammerArm" type="Sprite2D" parent="HammerPivot"]
+position = Vector2(50, 16)
+scale = Vector2(0.339375, 0.339375)
+texture = ExtResource("3_hammer")
+
+[node name="HeadPivot" type="Node2D" parent="."]
+position = Vector2(80.192, -58.762)
+
+[node name="Head" type="Sprite2D" parent="HeadPivot"]
+scale = Vector2(0.391875, 0.391875)
+texture = ExtResource("4_head")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

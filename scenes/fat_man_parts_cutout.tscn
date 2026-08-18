@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/fat_man_parts_cutout.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/fat man parts/fat-body_optimized_v1.webp" id="2_body"]
+[ext_resource type="Texture2D" path="res://assets/fat man parts/fat-head_optimized_v1.webp" id="3_head"]
+
+[node name="FatManPartsCutout" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="BodyBreathPivot" type="Node2D" parent="."]
+position = Vector2(0, 128)
+
+[node name="Body" type="Sprite2D" parent="BodyBreathPivot"]
+position = Vector2(0, -128)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_body")
+
+[node name="HeadPivot" type="Node2D" parent="."]
+position = Vector2(-8, -74.2)
+
+[node name="Head" type="Sprite2D" parent="HeadPivot"]
+position = Vector2(-14, -63)
+scale = Vector2(0.43, 0.43)
+texture = ExtResource("3_head")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

@@ -30,7 +30,7 @@ Za izravno pokretanje iz Godota na telefonu uključite **Developer options** i *
 
 - kratku početnu animaciju guranja i uskakanja na splav
 - automatsku plovidbu i upravljanje lijevo-desno
-- coine i dijelove brodova
+- užad i daske iz brodskih olupina
 - stijene i oštećenje splava
 - ograničen domet svake razine splava
 - povratak strujom i spremanje napretka

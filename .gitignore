@@ -8,6 +8,7 @@
 builds/
 artifacts/
 tmp/
+unused_assets/
 *.partial
 *.apk
 *.aab
