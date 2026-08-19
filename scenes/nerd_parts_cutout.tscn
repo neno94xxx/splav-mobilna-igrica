@@ -17,15 +17,17 @@ scale = Vector2(0.5252405, 0.5252405)
 texture = ExtResource("2_body")
 
 [node name="HammerPivot" type="Node2D" parent="."]
-position = Vector2(51.204, -41.232)
+position = Vector2(66.204, -41.232)
+z_index = 2
 
 [node name="HammerArm" type="Sprite2D" parent="HammerPivot"]
 position = Vector2(50, 16)
-scale = Vector2(0.339375, 0.339375)
+scale = Vector2(0.463246875, 0.463246875)
 texture = ExtResource("3_hammer")
 
 [node name="HeadPivot" type="Node2D" parent="."]
 position = Vector2(80.192, -58.762)
+z_index = 3
 
 [node name="Head" type="Sprite2D" parent="HeadPivot"]
 scale = Vector2(0.391875, 0.391875)

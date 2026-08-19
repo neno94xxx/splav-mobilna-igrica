@@ -18,11 +18,18 @@ func build_animation() -> void:
 	animation.loop_mode = Animation.LOOP_LINEAR
 
 	add_rotation_track(animation, NodePath("LeftPivot:rotation"), [
-		[0.00, deg_to_rad(-1.0)],
-		[1.55, deg_to_rad(1.5)],
-		[3.15, deg_to_rad(-0.7)],
-		[4.80, deg_to_rad(1.1)],
-		[6.40, deg_to_rad(-1.0)],
+		[0.00, deg_to_rad(-41.0)],
+		[1.55, deg_to_rad(-38.5)],
+		[3.15, deg_to_rad(-40.7)],
+		[4.80, deg_to_rad(-38.9)],
+		[6.40, deg_to_rad(-41.0)],
+	])
+	add_rotation_track(animation, NodePath("LeftCopyPivot:rotation"), [
+		[0.00, deg_to_rad(19.0)],
+		[1.55, deg_to_rad(21.5)],
+		[3.15, deg_to_rad(19.3)],
+		[4.80, deg_to_rad(21.1)],
+		[6.40, deg_to_rad(19.0)],
 	])
 	add_rotation_track(animation, NodePath("RightPivot:rotation"), [
 		[0.00, deg_to_rad(1.2)],

@@ -10,11 +10,13 @@ const ISLAND_SPRITE: Texture2D = preload("res://assets/sprites/deserted_island_v
 const LAUNCH_PUSH_ATLAS: Texture2D = preload("res://assets/sprites/launch_push_atlas_v1.png")
 const WORKSHOP_BACKGROUND_SCENE: PackedScene = preload("res://scenes/workshop_animated_background.tscn")
 const WORKSHOP_BRANCHES_SCENE: PackedScene = preload("res://scenes/workshop_branches.tscn")
+const WORKSHOP_RAFT_SCENE: PackedScene = preload("res://scenes/workshop_raft.tscn")
 const NERD_PARTS_CUTOUT_SCENE: PackedScene = preload("res://scenes/nerd_parts_cutout.tscn")
 const FAT_MAN_PARTS_CUTOUT_SCENE: PackedScene = preload("res://scenes/fat_man_parts_cutout.tscn")
-const NERD_PARTS_SCALE := 1.35
-const NERD_PARTS_BASE_POSITION := Vector2(142.0, 650.0)
-const FAT_MAN_PARTS_BASE_POSITION := Vector2(112.0, 380.0)
+const NERD_PARTS_SCALE := 1.03275
+const NERD_PARTS_BASE_POSITION := Vector2(292.0, 690.0)
+const FAT_MAN_PARTS_BASE_POSITION := Vector2(182.0, 410.0)
+const WORKSHOP_RAFT_BASE_POSITION := Vector2(358.0, 960.0)
 const SAIL_UPGRADE_ICON: Texture2D = preload("res://assets/sprites/sail_upgrade_triangle_v1.png")
 const SHIELD_UPGRADE_ICON: Texture2D = preload("res://assets/sprites/shield_upgrade_v1.png")
 const ROPE_SPRITE: Texture2D = preload("res://assets/sprites/rope_collectible_v1.png")
@@ -113,6 +115,7 @@ var result_rope_flash := 0.0
 var result_plank_flash := 0.0
 var workshop_preview_background: Node2D
 var workshop_branches_rig: Node2D
+var workshop_raft_preview: Node2D
 var workshop_character_rig: Node2D
 var workshop_fat_man_rig: Node2D
 var workshop_animation_time_override := -1.0
@@ -295,7 +298,7 @@ func setup_workshop_background() -> void:
 	workshop_branches_rig = WORKSHOP_BRANCHES_SCENE.instantiate() as Node2D
 	workshop_branches_rig.name = "WorkshopBranchesPreview"
 	workshop_branches_rig.show_behind_parent = true
-	workshop_branches_rig.z_index = -97
+	workshop_branches_rig.z_index = -94
 	add_child(workshop_branches_rig)
 
 	workshop_character_rig = NERD_PARTS_CUTOUT_SCENE.instantiate() as Node2D
@@ -313,13 +316,21 @@ func setup_workshop_background() -> void:
 	workshop_fat_man_rig.z_index = -95
 	add_child(workshop_fat_man_rig)
 
+	workshop_raft_preview = WORKSHOP_RAFT_SCENE.instantiate() as Node2D
+	workshop_raft_preview.name = "WorkshopRaftPreview"
+	workshop_raft_preview.position = WORKSHOP_RAFT_BASE_POSITION
+	workshop_raft_preview.show_behind_parent = true
+	workshop_raft_preview.z_index = -89
+	add_child(workshop_raft_preview)
+
 
 func update_workshop_background() -> void:
-	if not is_instance_valid(workshop_preview_background) or not is_instance_valid(workshop_branches_rig) or not is_instance_valid(workshop_character_rig) or not is_instance_valid(workshop_fat_man_rig):
+	if not is_instance_valid(workshop_preview_background) or not is_instance_valid(workshop_branches_rig) or not is_instance_valid(workshop_raft_preview) or not is_instance_valid(workshop_character_rig) or not is_instance_valid(workshop_fat_man_rig):
 		return
 	var is_visible := state == State.UPGRADES
 	workshop_preview_background.visible = is_visible
 	workshop_branches_rig.visible = is_visible
+	workshop_raft_preview.visible = is_visible
 	workshop_character_rig.visible = is_visible
 	workshop_fat_man_rig.visible = is_visible
 	if is_visible and workshop_animation_time_override >= 0.0:
