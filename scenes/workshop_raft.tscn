@@ -4,6 +4,8 @@
 
 [node name="WorkshopRaft" type="Node2D"]
 
-[node name="Raft" type="Sprite2D" parent="."]
+[node name="RaftVisual" type="Node2D" parent="."]
 scale = Vector2(1.3608, 1.3608)
+
+[node name="Raft" type="Sprite2D" parent="RaftVisual"]
 texture = ExtResource("1_raft")

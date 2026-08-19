@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay_ocean.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/gameplay_ocean.gdshader" id="2_shader"]
+[ext_resource type="Texture2D" path="res://assets/sea/ocean_optimized_v1.webp" id="3_ocean"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ocean"]
+shader = ExtResource("2_shader")
+shader_parameter/ocean_texture = ExtResource("3_ocean")
+shader_parameter/travel_pixels = 0.0
+shader_parameter/distortion_strength = 0.032
+shader_parameter/animation_speed = 0.42
+shader_parameter/tile_size_pixels = 460.0
+
+[node name="GameplayOcean" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Ocean" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_ocean")
+offset_right = 720.0
+offset_bottom = 1280.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

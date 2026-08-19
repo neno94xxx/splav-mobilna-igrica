@@ -8,6 +8,9 @@ const SAVE_PATH := "user://save.cfg"
 const SPRITE_ATLAS: Texture2D = preload("res://assets/sprites/raft_escape_atlas_v1.png")
 const ISLAND_SPRITE: Texture2D = preload("res://assets/sprites/deserted_island_v1.png")
 const LAUNCH_PUSH_ATLAS: Texture2D = preload("res://assets/sprites/launch_push_atlas_v1.png")
+const GAMEPLAY_OCEAN_SCENE: PackedScene = preload("res://scenes/gameplay_ocean.tscn")
+const RAFT_WAKE_TEXTURE: Texture2D = preload("res://assets/sea/splash1_optimized_v1.webp")
+const RAFT_TURN_SPLASH_TEXTURE: Texture2D = preload("res://assets/sea/splash7_optimized_v1.webp")
 const WORKSHOP_BACKGROUND_SCENE: PackedScene = preload("res://scenes/workshop_animated_background.tscn")
 const WORKSHOP_BRANCHES_SCENE: PackedScene = preload("res://scenes/workshop_branches.tscn")
 const WORKSHOP_RAFT_SCENE: PackedScene = preload("res://scenes/workshop_raft.tscn")
@@ -82,6 +85,7 @@ var touch_steering_active := false
 var active_touch_index := -1
 var joystick_target_axis := 0.0
 var joystick_visual_axis := 0.0
+var raft_steer_visual := 0.0
 var capture_requested := false
 var capture_frames := 0
 var capture_filename := "prototype.png"
@@ -113,6 +117,7 @@ var result_sequence_complete := true
 var result_button_reveal := 1.0
 var result_rope_flash := 0.0
 var result_plank_flash := 0.0
+var gameplay_ocean: Node2D
 var workshop_preview_background: Node2D
 var workshop_branches_rig: Node2D
 var workshop_raft_preview: Node2D
@@ -140,6 +145,7 @@ var victory_button := Rect2(120, 1100, 480, 88)
 func _ready() -> void:
 	rng.randomize()
 	load_progress()
+	setup_gameplay_ocean()
 	setup_workshop_background()
 	set_process(true)
 	set_process_unhandled_input(true)
@@ -257,6 +263,8 @@ func _process(delta: float) -> void:
 	upgrade_feedback_time = maxf(0.0, upgrade_feedback_time - delta)
 	var joystick_goal := joystick_target_axis if touch_steering_active and state == State.PLAYING else 0.0
 	joystick_visual_axis = move_toward(joystick_visual_axis, joystick_goal, delta * 7.5)
+	if state != State.PLAYING:
+		raft_steer_visual = move_toward(raft_steer_visual, 0.0, delta * 5.0)
 	update_particles(delta)
 
 	match state:
@@ -275,6 +283,7 @@ func _process(delta: float) -> void:
 			update_results(delta)
 		State.VICTORY:
 			world_scroll += 150.0 * delta
+	update_gameplay_ocean()
 
 	if capture_requested:
 		capture_frames += 1
@@ -286,6 +295,21 @@ func _process(delta: float) -> void:
 			get_tree().quit()
 
 	queue_redraw()
+
+
+func setup_gameplay_ocean() -> void:
+	gameplay_ocean = GAMEPLAY_OCEAN_SCENE.instantiate() as Node2D
+	gameplay_ocean.name = "GameplayOcean"
+	gameplay_ocean.show_behind_parent = true
+	gameplay_ocean.z_index = -200
+	add_child(gameplay_ocean)
+
+
+func update_gameplay_ocean() -> void:
+	if not is_instance_valid(gameplay_ocean):
+		return
+	var ocean_scroll := 0.0 if state == State.HOME or state == State.CHARGING else world_scroll
+	gameplay_ocean.call("set_travel", ocean_scroll)
 
 
 func setup_workshop_background() -> void:
@@ -367,6 +391,13 @@ func update_playing(delta: float) -> void:
 		keyboard_axis += 1.0
 	if keyboard_axis != 0.0:
 		target_x = raft_x + keyboard_axis * 390.0 * delta
+
+	var steer_goal := keyboard_axis
+	if touch_steering_active:
+		steer_goal = joystick_target_axis
+	elif is_zero_approx(steer_goal):
+		steer_goal = clampf((target_x - raft_x) / 105.0, -1.0, 1.0)
+	raft_steer_visual = move_toward(raft_steer_visual, steer_goal, delta * 6.5)
 
 	raft_x = move_toward(raft_x, target_x, 540.0 * delta)
 	raft_x = clampf(raft_x, 88.0, VIEW_SIZE.x - 88.0)
@@ -1260,19 +1291,9 @@ func draw_touch_joystick() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-func draw_ocean_background(scroll: float) -> void:
-	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), COLOR_WATER)
-	for row in 19:
-		var y := fposmod(row * 78.0 + scroll * 0.42, VIEW_SIZE.y + 90.0) - 45.0
-		var shift := 74.0 if row % 2 else 0.0
-		for column in 6:
-			var x := column * 148.0 + shift
-			draw_arc(Vector2(x, y), 48, 0.18, PI - 0.18, 14, Color(0.35, 0.87, 0.91, 0.30), 3.5)
-	for index in 36:
-		var seed_value := float(index * 193 % 997)
-		var x := fposmod(seed_value * 2.17, VIEW_SIZE.x)
-		var y := fposmod(seed_value * 3.41 + scroll * 0.7, VIEW_SIZE.y + 60.0) - 30.0
-		draw_circle(Vector2(x, y), 2.5, Color(0.8, 1.0, 1.0, 0.42))
+func draw_ocean_background(_scroll: float) -> void:
+	# The repeated, animated ocean is rendered by GameplayOcean behind this canvas.
+	pass
 
 
 func draw_departing_island(scroll: float) -> void:
@@ -1309,7 +1330,39 @@ func draw_launch_splash(position: Vector2, scale_value: float) -> void:
 
 
 func draw_raft_wake(position: Vector2, strength: float) -> void:
-	draw_atlas_sprite(Vector2i(3, 2), position + Vector2(0, 112.0), Vector2(205.0, 225.0) * strength)
+	if state == State.RETURNING:
+		return
+
+	var turn_amount := absf(raft_steer_visual)
+	if turn_amount > 0.06:
+		var turn_scale := strength * lerpf(0.72, 1.0, turn_amount)
+		var side_position := position + Vector2(-raft_steer_visual * 96.0, 104.0)
+		draw_foam_texture(
+			RAFT_TURN_SPLASH_TEXTURE,
+			side_position,
+			Vector2(260.0, 173.0) * turn_scale,
+			0.0,
+			raft_steer_visual > 0.0,
+			Color(1.0, 1.0, 1.0, lerpf(0.55, 0.92, turn_amount))
+		)
+		return
+
+	var wake_pulse := 1.0 + sin(state_time * 4.2) * 0.018
+	draw_foam_texture(
+		RAFT_WAKE_TEXTURE,
+		position + Vector2(0.0, 188.0 * strength),
+		Vector2(198.0 * wake_pulse, 352.0) * strength,
+		PI,
+		false,
+		Color(1.0, 1.0, 1.0, 0.88)
+	)
+
+
+func draw_foam_texture(texture: Texture2D, position: Vector2, size: Vector2, rotation: float, flip_x: bool, modulate: Color) -> void:
+	var transform_scale := Vector2(-1.0, 1.0) if flip_x else Vector2.ONE
+	draw_set_transform(position, rotation, transform_scale)
+	draw_texture_rect(texture, Rect2(-size * 0.5, size), false, modulate)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func draw_game_hud() -> void:

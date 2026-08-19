@@ -17,7 +17,7 @@ scale = Vector2(0.5252405, 0.5252405)
 texture = ExtResource("2_body")
 
 [node name="HammerPivot" type="Node2D" parent="."]
-position = Vector2(66.204, -41.232)
+position = Vector2(76.204, -41.232)
 z_index = 2
 
 [node name="HammerArm" type="Sprite2D" parent="HammerPivot"]
