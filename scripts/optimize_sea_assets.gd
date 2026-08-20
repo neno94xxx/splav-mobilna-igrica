@@ -3,8 +3,8 @@ extends SceneTree
 const QUALITY := 0.94
 const ACTIVE_PARTS := [
 	{
-		"source": "res://unused_assets/images/sea/ocean.png",
-		"output": "res://assets/sea/ocean_optimized_v1.webp",
+		"source": "res://unused_assets/images/sea/sea5.png",
+		"output": "res://assets/sea/sea5_optimized_v1.webp",
 		"max_size": Vector2i(512, 512),
 		"force_size": true,
 	},

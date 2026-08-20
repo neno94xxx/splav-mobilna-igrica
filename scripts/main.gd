@@ -1,6 +1,6 @@
 extends Node2D
 
-enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY }
+enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING }
 
 const VIEW_SIZE := Vector2(720.0, 1280.0)
 const RAFT_Y := 1035.0
@@ -11,6 +11,13 @@ const LAUNCH_PUSH_ATLAS: Texture2D = preload("res://assets/sprites/launch_push_a
 const GAMEPLAY_OCEAN_SCENE: PackedScene = preload("res://scenes/gameplay_ocean.tscn")
 const RAFT_WAKE_TEXTURE: Texture2D = preload("res://assets/sea/splash1_optimized_v1.webp")
 const RAFT_TURN_SPLASH_TEXTURE: Texture2D = preload("res://assets/sea/splash7_optimized_v1.webp")
+const OPENING_PARTY_TEXTURE: Texture2D = preload("res://assets/intro-scene/boat-party_optimized_v1.webp")
+const OPENING_SHIP_BACKGROUND: Texture2D = preload("res://assets/intro-scene/ship-background_optimized_v1.webp")
+const OPENING_FAT_BODY: Texture2D = preload("res://assets/intro-scene/fatguy-body_optimized_v1.webp")
+const OPENING_FAT_HEAD: Texture2D = preload("res://assets/intro-scene/fatguy-head_optimized_v1.webp")
+const OPENING_NERD_BODY: Texture2D = preload("res://assets/intro-scene/nerd-body_optimized_v1.webp")
+const OPENING_NERD_HEAD: Texture2D = preload("res://assets/intro-scene/nerd-head_optimized_v1.webp")
+const OPENING_RAIL: Texture2D = preload("res://assets/intro-scene/rail_optimized_v1.webp")
 const WORKSHOP_BACKGROUND_SCENE: PackedScene = preload("res://scenes/workshop_animated_background.tscn")
 const WORKSHOP_BRANCHES_SCENE: PackedScene = preload("res://scenes/workshop_branches.tscn")
 const WORKSHOP_RAFT_SCENE: PackedScene = preload("res://scenes/workshop_raft.tscn")
@@ -39,6 +46,12 @@ const INTRO_PUSH_MAX_TIME := 1.65
 const INTRO_JUMP_TIME := 0.58
 const INTRO_FAILED_JUMP_TIME := 0.28
 const INTRO_SETTLE_TIME := 0.72
+const OPENING_PAN_DURATION := 5.5
+const OPENING_TRANSITION_DURATION := 0.65
+const RETURN_SCROLL_SPEED := 260.0
+const RETURN_RESULTS_DELAY := 2.75
+const RETURN_RAFT_DRIFT_TIME := 0.65
+const RETURN_RAFT_DRIFT_OFFSET := 70.0
 const RESULT_TRANSFER_DELAY := 0.55
 const RESULT_TRANSFER_MIN_INTERVAL := 0.055
 const RESULT_TRANSFER_MAX_INTERVAL := 0.13
@@ -60,7 +73,7 @@ const COLOR_ROPE := Color("#ead8b4")
 const COLOR_WOOD := Color("#a96942")
 const COLOR_CORAL := Color("#ef6f6c")
 
-var state: int = State.HOME
+var state: int = State.OPENING
 var state_time := 0.0
 var intro_time := 0.0
 var world_scroll := 0.0
@@ -74,6 +87,10 @@ var sail_level := 0
 var protection_level := 0
 var raft_health := 1
 var return_reason := ""
+var return_scene_visible := false
+var return_landed := false
+var return_elapsed := 0.0
+var return_impact_time := 0.0
 var banked_this_run := false
 var hit_flash := 0.0
 var spawn_timer := 0.0
@@ -132,6 +149,7 @@ var result_flyers: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
 
 var launch_button := Rect2(110, 555, 500, 102)
+var opening_skip_button := Rect2(535, 30, 155, 58)
 var again_button := Rect2(100, 895, 520, 88)
 var upgrade_button := Rect2(100, 1010, 520, 88)
 var sail_upgrade_button := Rect2(450, 271, 234, 34)
@@ -276,10 +294,10 @@ func _process(delta: float) -> void:
 		State.PLAYING:
 			update_playing(delta)
 		State.RETURNING:
-			world_scroll -= 360.0 * delta
-			if state_time >= 2.25:
-				finish_run()
+			update_returning(delta)
 		State.RESULTS:
+			if return_scene_visible:
+				update_returning(delta)
 			update_results(delta)
 		State.VICTORY:
 			world_scroll += 150.0 * delta
@@ -295,8 +313,6 @@ func _process(delta: float) -> void:
 			get_tree().quit()
 
 	queue_redraw()
-
-
 func setup_gameplay_ocean() -> void:
 	gameplay_ocean = GAMEPLAY_OCEAN_SCENE.instantiate() as Node2D
 	gameplay_ocean.name = "GameplayOcean"
@@ -448,6 +464,39 @@ func advance_world(delta: float) -> float:
 	var distance_rate := lerpf(6.2, 15.5, pow(clampf(launch_power, 0.0, 1.0), 0.72))
 	distance_m += distance_rate * lerpf(1.0, 0.34, limit_slowdown) * delta
 	return speed
+
+
+func update_returning(delta: float) -> void:
+	return_elapsed += delta
+	if return_landed:
+		return_impact_time += delta
+	else:
+		var previous_scroll := world_scroll
+		world_scroll = maxf(0.0, world_scroll - RETURN_SCROLL_SPEED * delta)
+		var scroll_delta := world_scroll - previous_scroll
+		shift_returning_world_objects(scroll_delta, delta)
+		if is_zero_approx(world_scroll):
+			return_landed = true
+			return_impact_time = 0.0
+
+	if state == State.RETURNING and return_elapsed >= RETURN_RESULTS_DELAY:
+		finish_run()
+
+
+func shift_returning_world_objects(scroll_delta: float, delta: float) -> void:
+	for index in range(obstacles.size() - 1, -1, -1):
+		var obstacle := obstacles[index]
+		obstacle["position"].y += scroll_delta
+		obstacle["rotation"] += obstacle["spin"] * delta
+		if obstacle["position"].y < -100.0:
+			obstacles.remove_at(index)
+
+	for index in range(pickups.size() - 1, -1, -1):
+		var pickup := pickups[index]
+		pickup["position"].y += scroll_delta
+		pickup["rotation"] += delta * 1.8
+		if pickup["position"].y < -80.0:
+			pickups.remove_at(index)
 
 
 func spawn_object() -> void:
@@ -613,11 +662,19 @@ func return_to_launch_screen() -> void:
 	launch_overcharged = false
 	launch_is_perfect = false
 	launch_hold_ratio = 0.55
+	return_scene_visible = false
+	return_landed = false
+	return_elapsed = 0.0
+	return_impact_time = 0.0
 
 
 func begin_run(continue_from_intro: bool = false) -> void:
 	state = State.PLAYING
 	state_time = 0.0
+	return_scene_visible = false
+	return_landed = false
+	return_elapsed = 0.0
+	return_impact_time = 0.0
 	if not continue_from_intro:
 		distance_m = 0.0
 		world_scroll = 0.0
@@ -641,6 +698,10 @@ func begin_return(reason: String) -> void:
 	state = State.RETURNING
 	state_time = 0.0
 	return_reason = reason
+	return_scene_visible = true
+	return_landed = is_zero_approx(world_scroll)
+	return_elapsed = 0.0
+	return_impact_time = 0.0
 	pointer_active = false
 	reset_touch_joystick()
 
@@ -923,6 +984,9 @@ func steering_axis_for_touch(touch_x: float) -> float:
 
 func handle_press(position: Vector2) -> void:
 	match state:
+		State.OPENING:
+			if opening_skip_button.has_point(position):
+				return_to_launch_screen()
 		State.HOME:
 			if launch_button.has_point(position):
 				start_charging()
@@ -1121,6 +1185,8 @@ func prepare_results_animation_capture() -> void:
 
 func _draw() -> void:
 	match state:
+		State.OPENING:
+			draw_opening()
 		State.HOME, State.CHARGING:
 			draw_home()
 		State.INTRO:
@@ -1134,6 +1200,87 @@ func _draw() -> void:
 		State.VICTORY:
 			draw_victory()
 	draw_particles()
+
+
+func draw_opening() -> void:
+	var transition_start := OPENING_PAN_DURATION
+	var static_start := transition_start + OPENING_TRANSITION_DURATION
+
+	if state_time < transition_start:
+		var pan_progress := smoothstep(0.0, 1.0, clampf(state_time / OPENING_PAN_DURATION, 0.0, 1.0))
+		draw_opening_party_pan(pan_progress)
+	elif state_time < static_start:
+		var transition_progress := smoothstep(
+			0.0,
+			1.0,
+			clampf((state_time - transition_start) / OPENING_TRANSITION_DURATION, 0.0, 1.0)
+		)
+		draw_opening_party_pan(1.0)
+		draw_opening_ship_scene(transition_progress)
+	else:
+		draw_opening_ship_scene(1.0)
+
+	draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94)
+
+
+func draw_opening_party_pan(progress: float) -> void:
+	var texture_size := OPENING_PARTY_TEXTURE.get_size()
+	var source_height := texture_size.y * 0.80
+	var source_width := source_height * VIEW_SIZE.x / VIEW_SIZE.y
+	var source_y := texture_size.y * 0.10
+	var source_x := lerpf(0.0, texture_size.x - source_width, clampf(progress, 0.0, 1.0))
+	var source_rect := Rect2(Vector2(source_x, source_y), Vector2(source_width, source_height))
+	draw_texture_rect_region(OPENING_PARTY_TEXTURE, Rect2(Vector2.ZERO, VIEW_SIZE), source_rect)
+
+
+func draw_opening_ship_scene(alpha: float) -> void:
+	var tint := Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0))
+	draw_texture_cover(OPENING_SHIP_BACKGROUND, Rect2(Vector2.ZERO, VIEW_SIZE), tint, 1.14)
+
+	var nerd_breath := sin(state_time * 1.62 + 0.45)
+	var fat_breath := sin(state_time * 1.48)
+	draw_opening_character(
+		OPENING_NERD_BODY,
+		OPENING_NERD_HEAD,
+		Rect2(15.0, 390.0, 350.0, 466.0),
+		Rect2(70.0, 185.0, 260.0, 260.0),
+		nerd_breath,
+		tint
+	)
+	draw_opening_character(
+		OPENING_FAT_BODY,
+		OPENING_FAT_HEAD,
+		Rect2(330.0, 390.0, 390.0, 520.0),
+		Rect2(375.0, 175.0, 300.0, 300.0),
+		fat_breath,
+		tint
+	)
+	draw_texture_rect(OPENING_RAIL, Rect2(-390.0, 890.0, 1500.0, 500.0), false, tint)
+
+
+func draw_opening_character(body_texture: Texture2D, head_texture: Texture2D, body_rect: Rect2, head_rect: Rect2, breath: float, tint: Color) -> void:
+	var body_scale := Vector2(1.0 + breath * 0.006, 1.0 + breath * 0.010)
+	var breathing_size := body_rect.size * body_scale
+	var breathing_rect := Rect2(body_rect.get_center() - breathing_size * 0.5, breathing_size)
+	var head_follow := Vector2(0.0, -breath * body_rect.size.y * 0.005)
+	draw_texture_rect(body_texture, breathing_rect, false, tint)
+	draw_texture_rect(head_texture, Rect2(head_rect.position + head_follow, head_rect.size), false, tint)
+
+
+func draw_texture_cover(texture: Texture2D, target_rect: Rect2, tint: Color = Color.WHITE, horizontal_zoom_out: float = 1.0) -> void:
+	var texture_size := texture.get_size()
+	var target_aspect := target_rect.size.x / target_rect.size.y
+	var texture_aspect := texture_size.x / texture_size.y
+	var source_rect := Rect2(Vector2.ZERO, texture_size)
+	if texture_aspect > target_aspect:
+		var source_width := minf(texture_size.x, texture_size.y * target_aspect * maxf(horizontal_zoom_out, 1.0))
+		source_rect.position.x = (texture_size.x - source_width) * 0.5
+		source_rect.size.x = source_width
+	else:
+		var source_height := texture_size.x / target_aspect
+		source_rect.position.y = (texture_size.y - source_height) * 0.5
+		source_rect.size.y = source_height
+	draw_texture_rect_region(texture, target_rect, source_rect, tint)
 
 
 func draw_home() -> void:
@@ -1249,7 +1396,7 @@ func draw_game() -> void:
 
 	var return_offset := 0.0
 	if state == State.RETURNING:
-		return_offset = ease(clampf(state_time / 2.25, 0.0, 1.0), -1.8) * 105.0
+		return_offset = returning_raft_offset()
 	var wake_strength := lerpf(0.28, 1.05, clampf(inverse_lerp(90.0, 850.0, raft_forward_speed), 0.0, 1.0))
 	draw_raft_wake(Vector2(raft_x, RAFT_Y + return_offset), wake_strength)
 	if launch_overcharged:
@@ -1267,6 +1414,20 @@ func draw_game() -> void:
 		draw_touch_joystick()
 	if state == State.RETURNING:
 		draw_return_overlay()
+
+
+func returning_raft_offset() -> float:
+	var drift_progress := smoothstep(0.0, 1.0, clampf(return_elapsed / RETURN_RAFT_DRIFT_TIME, 0.0, 1.0))
+	var offset := RETURN_RAFT_DRIFT_OFFSET * drift_progress
+	if not return_landed:
+		return offset
+	if return_impact_time < 0.10:
+		return offset + lerpf(0.0, 22.0, return_impact_time / 0.10)
+	if return_impact_time < 0.24:
+		return offset + lerpf(22.0, -7.0, (return_impact_time - 0.10) / 0.14)
+	if return_impact_time < 0.42:
+		return offset + lerpf(-7.0, 0.0, (return_impact_time - 0.24) / 0.18)
+	return offset
 
 
 func draw_touch_joystick() -> void:
@@ -1297,7 +1458,7 @@ func draw_ocean_background(_scroll: float) -> void:
 
 
 func draw_departing_island(scroll: float) -> void:
-	var island_y := 1420.0 + scroll * 0.88
+	var island_y := 1420.0 + scroll
 	if island_y - 470.0 > VIEW_SIZE.y:
 		return
 	draw_texture_rect(ISLAND_SPRITE, Rect2(Vector2(360.0, island_y) - Vector2(470.0, 470.0), Vector2(940.0, 940.0)), false)
@@ -1397,11 +1558,16 @@ func draw_return_overlay() -> void:
 
 
 func draw_results() -> void:
-	draw_ocean_background(world_scroll)
-	draw_panel(Rect2(35, 70, 650, 1095))
+	if return_scene_visible:
+		draw_return_scene_background()
+	else:
+		draw_ocean_background(world_scroll)
+	var results_panel_color := Color(0.97, 0.95, 0.88, 0.86) if return_scene_visible else COLOR_PANEL
+	draw_panel(Rect2(35, 70, 650, 1095), results_panel_color)
 	var entrance := smoothstep(0.0, 1.0, clampf(state_time / 0.44, 0.0, 1.0))
 	var title_y := lerpf(205.0, 145.0, entrance)
-	draw_text_center("BACK ON THE ISLAND", title_y, 42, COLOR_INK)
+	var results_title := "BACK ON THE ISLAND" if return_landed else "RETURNING TO THE ISLAND"
+	draw_text_center(results_title, title_y, 42, COLOR_INK)
 	draw_text_center(return_reason, lerpf(235.0, 190.0, entrance), 21, COLOR_CORAL)
 	draw_text_center("You traveled  %d m" % int(distance_m), 255, 28, COLOR_INK)
 	draw_text_center("RUN HAUL", 308, 20, Color("#45647a"))
@@ -1426,7 +1592,8 @@ func draw_results() -> void:
 	else:
 		draw_text_center("STORING SALVAGE...", 665, 19, Color("#45647a"))
 	draw_text_center("Range %d m    |    Safe rock hits %d" % [int(current_max_distance()), protection_level], 704, 19, Color("#45647a"))
-	draw_top_raft(Vector2(360, 800 + sin(state_time * 2.4) * 4.0), raft_level, maximum_raft_health())
+	if not return_scene_visible:
+		draw_top_raft(Vector2(360, 800 + sin(state_time * 2.4) * 4.0), raft_level, maximum_raft_health())
 	draw_result_flyers()
 
 	if result_sequence_complete:
@@ -1434,6 +1601,17 @@ func draw_results() -> void:
 		var button_offset := Vector2(0.0, (1.0 - button_progress) * 65.0)
 		draw_button(Rect2(again_button.position + button_offset, again_button.size), "NEW LAUNCH", true, COLOR_WATER, button_progress)
 		draw_button(Rect2(upgrade_button.position + button_offset, upgrade_button.size), "OPEN UPGRADES", true, COLOR_CORAL, button_progress)
+
+
+func draw_return_scene_background() -> void:
+	draw_ocean_background(world_scroll)
+	draw_departing_island(world_scroll)
+	for pickup in pickups:
+		draw_pickup(pickup)
+	for obstacle in obstacles:
+		draw_rock(obstacle)
+	var raft_position := Vector2(raft_x, RAFT_Y + returning_raft_offset())
+	draw_top_raft(raft_position, raft_level, raft_health)
 
 
 func draw_result_total(kind: String, count_position: Vector2, count: int, flash: float) -> void:

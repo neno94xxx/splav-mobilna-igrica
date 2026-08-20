@@ -5,7 +5,7 @@ uniform sampler2D ocean_texture : source_color, repeat_enable, filter_linear;
 uniform float travel_pixels = 0.0;
 uniform float distortion_strength : hint_range(0.0, 0.06, 0.001) = 0.032;
 uniform float animation_speed : hint_range(0.0, 2.0, 0.01) = 0.42;
-uniform float tile_size_pixels : hint_range(256.0, 720.0, 1.0) = 460.0;
+uniform float tile_size_pixels : hint_range(192.0, 720.0, 1.0) = 322.0;
 
 
 void fragment() {

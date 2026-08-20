@@ -3,6 +3,15 @@
 .mono/
 *.translation
 
+# Local Godot/editor and graphics-driver state
+.godot_user/
+/AMD/
+/Godot/
+/export_templates/
+/feature_profiles/
+/script_templates/
+/text_editor_themes/
+
 # Portable local tools and generated game outputs
 .tools/
 builds/
@@ -50,3 +59,22 @@ desktop.ini
 # Local screenshot from setup/troubleshooting
 /godot.png
 /godot.png.import
+
+# Source artwork, backups and local visual references not loaded by the game
+/backups/
+/concept_art/
+/assets/Untitled.png
+/assets/Untitled.png.import
+
+# Retired gameplay experiments and assets no longer referenced by the project
+/assets/impact/
+/scenes/fat_man_breath.tscn
+/scenes/nerd_hammer_cutout.tscn
+/scripts/fat_man_breath.gd
+/scripts/fat_man_breath.gd.uid
+/scripts/nerd_hammer_cutout.gd
+/scripts/nerd_hammer_cutout.gd.uid
+/shaders/nerd_hammer_rig.gdshader
+/shaders/nerd_hammer_rig.gdshader.uid
+/shaders/workshop_background.gdshader
+/shaders/workshop_background.gdshader.uid
