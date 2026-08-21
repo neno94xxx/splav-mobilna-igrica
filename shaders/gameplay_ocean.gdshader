@@ -3,6 +3,7 @@ render_mode unshaded;
 
 uniform sampler2D ocean_texture : source_color, repeat_enable, filter_linear;
 uniform float travel_pixels = 0.0;
+uniform float horizontal_travel_pixels = 0.0;
 uniform float distortion_strength : hint_range(0.0, 0.06, 0.001) = 0.032;
 uniform float animation_speed : hint_range(0.0, 2.0, 0.01) = 0.42;
 uniform float tile_size_pixels : hint_range(192.0, 720.0, 1.0) = 322.0;
@@ -10,6 +11,7 @@ uniform float tile_size_pixels : hint_range(192.0, 720.0, 1.0) = 322.0;
 
 void fragment() {
 	vec2 tiled_uv = UV * (vec2(720.0, 1280.0) / tile_size_pixels);
+	tiled_uv.x += horizontal_travel_pixels / tile_size_pixels;
 	tiled_uv.y -= travel_pixels / tile_size_pixels;
 
 	float time = TIME * animation_speed;

@@ -20,6 +20,12 @@ const ACTIVE_PARTS := [
 		"max_size": Vector2i(512, 512),
 		"force_size": false,
 	},
+	{
+		"source": "res://unused_assets/images/sea/ship-on-a-sea.png",
+		"output": "res://assets/sea/ship-on-a-sea_optimized_v1.webp",
+		"max_size": Vector2i(1024, 1024),
+		"force_size": false,
+	},
 ]
 const OPTIONAL_NAMES := [
 	"drops1.png",
