@@ -1,6 +1,6 @@
 extends Node2D
 
-enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING }
+enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING, RAFT_PREVIEW, FAT_RAFT_PREVIEW, SKINNY_RAFT_PREVIEW, FAT_RAFT2_PREVIEW, CAPTAIN_PREVIEW }
 
 const VIEW_SIZE := Vector2(720.0, 1280.0)
 const RAFT_Y := 1035.0
@@ -24,6 +24,22 @@ const OPENING_NERD_SCARED_HEAD: Texture2D = preload("res://assets/intro-scene/ne
 const OPENING_RAIL: Texture2D = preload("res://assets/intro-scene/rail_optimized_v1.webp")
 const OPENING_DAMAGED_SHIP: Texture2D = preload("res://assets/intro-scene/ship-damaged_optimized_v1.webp")
 const OPENING_GLACIER: Texture2D = preload("res://assets/intro-scene/glacier_optimized_v1.webp")
+const OPENING_CAPTAIN: Texture2D = preload("res://assets/intro-scene/captain_optimized_v1.webp")
+const OPENING_PLANKS: Texture2D = preload("res://assets/intro-scene/planks_optimized_v1.webp")
+const OPENING_PASSENGER_BACKGROUND: Texture2D = preload("res://assets/intro-scene/background-sea-sky_optimized_v1.webp")
+const OPENING_PASSENGER_SHIP: Texture2D = preload("res://assets/intro-scene/ship_optimized_v1.webp")
+const OPENING_PASSENGER_MAN: Texture2D = preload("res://assets/intro-scene/man1_optimized_v1.webp")
+const OPENING_WOMAN_1: Texture2D = preload("res://assets/intro-scene/woman1_optimized_v1.webp")
+const OPENING_WOMAN_1_LEFT_ARM: Texture2D = preload("res://assets/intro-scene/woman1-left-arm_optimized_v1.webp")
+const OPENING_WOMAN_1_RIGHT_ARM: Texture2D = preload("res://assets/intro-scene/woman1-right-arm_optimized_v1.webp")
+const OPENING_WOMAN_2: Texture2D = preload("res://assets/intro-scene/woman2_optimized_v1.webp")
+const OPENING_WOMAN_2_LEFT_ARM: Texture2D = preload("res://assets/intro-scene/woman2-left-arm_optimized_v1.webp")
+const OPENING_WOMAN_2_RIGHT_ARM: Texture2D = preload("res://assets/intro-scene/woman2-right-arm_optimized_v1.webp")
+const OPENING_RAFT_BACKGROUND: Texture2D = preload("res://assets/intro-scene/background-sea-sky2_optimized_v1.webp")
+const OPENING_BOYS_AND_RAFT: Texture2D = preload("res://assets/intro-scene/boys-and-raft_optimized_v1.webp")
+const OPENING_FAT_BOY_RAFT: Texture2D = preload("res://assets/intro-scene/fat-boy-raft_optimized_v1.webp")
+const OPENING_SKINNY_BOY_RAFT: Texture2D = preload("res://assets/intro-scene/skinny-boy-raft_optimized_v1.webp")
+const OPENING_FAT_BOY_RAFT2: Texture2D = preload("res://assets/intro-scene/fat-boy-raft2_optimized_v1.webp")
 const WORKSHOP_BACKGROUND_SCENE: PackedScene = preload("res://scenes/workshop_animated_background.tscn")
 const WORKSHOP_BRANCHES_SCENE: PackedScene = preload("res://scenes/workshop_branches.tscn")
 const WORKSHOP_RAFT_SCENE: PackedScene = preload("res://scenes/workshop_raft.tscn")
@@ -58,15 +74,54 @@ const OPENING_EXTERIOR_OCEAN_SPEED := 145.0
 const OPENING_EXTERIOR_OCEAN_TILE_SIZE := 270.0
 const OPENING_PAN_DURATION := 5.5
 const OPENING_TRANSITION_DURATION := 0.65
-const OPENING_DIALOGUE_START := 0.45
-const OPENING_DIALOGUE_SECOND := 3.80
-const OPENING_DIALOGUE_THIRD := 7.20
-const OPENING_DIALOGUE_FOURTH := 10.10
-const OPENING_DIALOGUE_FIFTH := 13.20
-const OPENING_IMPACT_TIME := 15.85
+const OPENING_DIALOGUE_START := 0.45 / 1.10
+const OPENING_DIALOGUE_SECOND := 3.80 / 1.10
+const OPENING_DIALOGUE_THIRD := 7.20 / 1.10
+const OPENING_DIALOGUE_FOURTH := 10.10 / 1.10
+const OPENING_DIALOGUE_FIFTH := 13.20 / 1.10
+const OPENING_IMPACT_TIME := OPENING_DIALOGUE_FIFTH + ((15.85 - 13.20) / 1.10) * 0.60
 const OPENING_IMPACT_DURATION := 0.72
 const OPENING_DAMAGED_TRANSITION_DURATION := 0.55
 const OPENING_DAMAGED_TURN_DURATION := 4.0
+const OPENING_CAPTAIN_TRANSITION_DURATION := 0.55
+const OPENING_CAPTAIN_HOLD_DURATION := 3.0
+const OPENING_BREAKUP_TRANSITION_DURATION := 0.55
+const OPENING_BREAKUP_SMOKE_START := 1.60
+const OPENING_BREAKUP_SWAP_TIME := 2.75
+const OPENING_BREAKUP_DURATION := 4.60
+const OPENING_PLANKS_HOLD_DURATION := 3.0
+const OPENING_PASSENGERS_TRANSITION_DURATION := 0.65
+const OPENING_PASSENGERS_HOLD_DURATION := 4.5 * 0.65
+const OPENING_RAFT_TRANSITION_DURATION := 0.65
+const OPENING_RAFT_HOLD_DURATION := 4.5
+const OPENING_FAT_RAFT_TRANSITION_DURATION := 0.55
+const OPENING_FAT_RAFT_HOLD_DURATION := 6.5
+const OPENING_SKINNY_RAFT_TRANSITION_DURATION := 0.55
+const OPENING_SKINNY_RAFT_HOLD_DURATION := 5.0
+const OPENING_FAT_RAFT2_TRANSITION_DURATION := 0.55
+const OPENING_FAT_RAFT2_HOLD_DURATION := 4.0
+const OPENING_END_FADE_DURATION := 0.65
+const OPENING_CAPTAIN_PREVIEW_ONLY := false
+const OPENING_PASSENGERS_PREVIEW_ONLY := false
+const OPENING_RAFT_PREVIEW_ONLY := false
+const OPENING_FAT_RAFT_PREVIEW_ONLY := false
+const OPENING_SKINNY_RAFT_PREVIEW_ONLY := false
+const OPENING_FAT_RAFT2_PREVIEW_ONLY := false
+const OPENING_PLANK_LAYOUT := [
+	{"position": Vector2(78.0, 338.0), "size": 154.0, "rotation": -0.22},
+	{"position": Vector2(168.0, 365.0), "size": 166.0, "rotation": 0.15},
+	{"position": Vector2(258.0, 350.0), "size": 148.0, "rotation": -0.08},
+	{"position": Vector2(348.0, 380.0), "size": 172.0, "rotation": 0.24},
+	{"position": Vector2(442.0, 355.0), "size": 158.0, "rotation": -0.18},
+	{"position": Vector2(538.0, 390.0), "size": 170.0, "rotation": 0.10},
+	{"position": Vector2(632.0, 365.0), "size": 150.0, "rotation": -0.28},
+	{"position": Vector2(116.0, 500.0), "size": 168.0, "rotation": 0.27},
+	{"position": Vector2(220.0, 520.0), "size": 156.0, "rotation": -0.16},
+	{"position": Vector2(326.0, 495.0), "size": 178.0, "rotation": 0.08},
+	{"position": Vector2(438.0, 530.0), "size": 162.0, "rotation": -0.25},
+	{"position": Vector2(548.0, 505.0), "size": 174.0, "rotation": 0.19},
+	{"position": Vector2(640.0, 535.0), "size": 152.0, "rotation": -0.06},
+]
 const RETURN_SCROLL_SPEED := 260.0
 const RETURN_RESULTS_DELAY := 2.75
 const RETURN_RAFT_DRIFT_TIME := 0.65
@@ -168,7 +223,7 @@ var result_flyers: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
 
 var launch_button := Rect2(110, 555, 500, 102)
-var opening_skip_button := Rect2(535, 30, 155, 58)
+var opening_skip_button := Rect2(535, 1180, 155, 58)
 var again_button := Rect2(100, 895, 520, 88)
 var upgrade_button := Rect2(100, 1010, 520, 88)
 var sail_upgrade_button := Rect2(450, 271, 234, 34)
@@ -188,9 +243,32 @@ func _ready() -> void:
 	set_process_unhandled_input(true)
 	var user_args := OS.get_cmdline_user_args()
 	touch_joystick_enabled = OS.get_name() == "Android" or "--touch-preview" in user_args
+	if OPENING_CAPTAIN_PREVIEW_ONLY:
+		state = State.CAPTAIN_PREVIEW
+		state_time = 0.0
+	elif OPENING_PASSENGERS_PREVIEW_ONLY:
+		state = State.OPENING
+		state_time = opening_deck_start_time() + opening_passengers_deck_time() + OPENING_PASSENGERS_TRANSITION_DURATION + 0.8
+	elif OPENING_RAFT_PREVIEW_ONLY:
+		state = State.RAFT_PREVIEW
+		state_time = 0.0
+	elif OPENING_FAT_RAFT_PREVIEW_ONLY:
+		state = State.FAT_RAFT_PREVIEW
+		state_time = 0.0
+	elif OPENING_SKINNY_RAFT_PREVIEW_ONLY:
+		state = State.SKINNY_RAFT_PREVIEW
+		state_time = 0.0
+	elif OPENING_FAT_RAFT2_PREVIEW_ONLY:
+		state = State.FAT_RAFT2_PREVIEW
+		state_time = 0.0
 	if "--smoke-test" in user_args:
 		call_deferred("run_smoke_test")
-	if "--capture-opening-final" in user_args:
+	if "--capture-opening-party" in user_args:
+		state = State.OPENING
+		state_time = OPENING_EXTERIOR_DURATION + OPENING_PAN_DURATION * 0.5
+		capture_filename = "opening_party.png"
+		capture_requested = true
+	elif "--capture-opening-final" in user_args:
 		state = State.OPENING
 		state_time = OPENING_EXTERIOR_DURATION + OPENING_PAN_DURATION + OPENING_TRANSITION_DURATION + 1.0
 		capture_filename = "opening_final.png"
@@ -209,6 +287,51 @@ func _ready() -> void:
 		state = State.OPENING
 		state_time = opening_deck_start_time() + OPENING_IMPACT_TIME + OPENING_IMPACT_DURATION + OPENING_DAMAGED_TRANSITION_DURATION + 2.0
 		capture_filename = "opening_damaged.png"
+		capture_requested = true
+	elif "--capture-opening-captain" in user_args:
+		state = State.OPENING
+		state_time = opening_deck_start_time() + OPENING_IMPACT_TIME + OPENING_IMPACT_DURATION + OPENING_DAMAGED_TRANSITION_DURATION + OPENING_DAMAGED_TURN_DURATION + OPENING_CAPTAIN_TRANSITION_DURATION + 0.5
+		capture_filename = "opening_captain.png"
+		capture_requested = true
+	elif "--capture-opening-planks" in user_args:
+		state = State.OPENING
+		state_time = opening_deck_start_time() + opening_planks_deck_time() + 1.0
+		capture_filename = "opening_planks.png"
+		capture_requested = true
+	elif "--capture-opening-smoke" in user_args:
+		state = State.OPENING
+		state_time = opening_deck_start_time() + opening_breakup_deck_time() + OPENING_BREAKUP_TRANSITION_DURATION + OPENING_BREAKUP_SWAP_TIME
+		capture_filename = "opening_smoke.png"
+		capture_requested = true
+	elif "--capture-opening-breakup" in user_args:
+		state = State.OPENING
+		state_time = opening_deck_start_time() + opening_breakup_deck_time() + OPENING_BREAKUP_TRANSITION_DURATION + 0.8
+		capture_filename = "opening_breakup.png"
+		capture_requested = true
+	elif "--capture-opening-passengers" in user_args:
+		state = State.OPENING
+		state_time = opening_deck_start_time() + opening_passengers_deck_time() + OPENING_PASSENGERS_TRANSITION_DURATION + 0.8
+		capture_filename = "opening_passengers.png"
+		capture_requested = true
+	elif "--capture-opening-raft" in user_args:
+		state = State.RAFT_PREVIEW
+		state_time = 1.4
+		capture_filename = "opening_raft.png"
+		capture_requested = true
+	elif "--capture-opening-fat-raft" in user_args:
+		state = State.FAT_RAFT_PREVIEW
+		state_time = 0.0
+		capture_filename = "opening_fat_raft.png"
+		capture_requested = true
+	elif "--capture-opening-skinny-raft" in user_args:
+		state = State.SKINNY_RAFT_PREVIEW
+		state_time = 0.0
+		capture_filename = "opening_skinny_raft.png"
+		capture_requested = true
+	elif "--capture-opening-fat-raft2" in user_args:
+		state = State.FAT_RAFT2_PREVIEW
+		state_time = 0.0
+		capture_filename = "opening_fat_raft2.png"
 		capture_requested = true
 	elif "--capture" in user_args:
 		capture_requested = true
@@ -325,6 +448,9 @@ func _process(delta: float) -> void:
 	update_particles(delta)
 
 	match state:
+		State.OPENING:
+			if state_time >= opening_total_duration() and not capture_requested:
+				return_to_launch_screen()
 		State.CHARGING:
 			var time_ratio := clampf(state_time / LAUNCH_FULL_TIME, 0.0, 1.0)
 			launch_charge = (exp(LAUNCH_EXPONENT * time_ratio) - 1.0) / (exp(LAUNCH_EXPONENT) - 1.0)
@@ -1031,7 +1157,7 @@ func steering_axis_for_touch(touch_x: float) -> float:
 
 func handle_press(position: Vector2) -> void:
 	match state:
-		State.OPENING:
+		State.OPENING, State.CAPTAIN_PREVIEW:
 			if opening_skip_button.has_point(position):
 				return_to_launch_screen()
 		State.HOME:
@@ -1232,6 +1358,17 @@ func prepare_results_animation_capture() -> void:
 
 func _draw() -> void:
 	match state:
+		State.CAPTAIN_PREVIEW:
+			draw_opening_captain_scene(1.0)
+			draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94, 33)
+		State.FAT_RAFT2_PREVIEW:
+			draw_opening_fat_raft2_preview()
+		State.SKINNY_RAFT_PREVIEW:
+			draw_opening_skinny_raft_preview()
+		State.FAT_RAFT_PREVIEW:
+			draw_opening_fat_raft_preview()
+		State.RAFT_PREVIEW:
+			draw_opening_raft_preview()
 		State.OPENING:
 			draw_opening()
 		State.HOME, State.CHARGING:
@@ -1247,6 +1384,198 @@ func _draw() -> void:
 		State.VICTORY:
 			draw_victory()
 	draw_particles()
+
+
+func draw_opening_fat_raft2_preview() -> void:
+	draw_texture_cover(OPENING_FAT_BOY_RAFT2, Rect2(Vector2.ZERO, VIEW_SIZE))
+
+	var bubble_rect := Rect2(32.0, 290.0, 656.0, 132.0)
+	var bubble_color := Color(0.96, 0.985, 1.0, 0.97)
+	var ink_color := Color(0.055, 0.11, 0.14)
+	var speaker_point := Vector2(365.0, 535.0)
+	var tail_anchor_x := 365.0
+	var tail_points := PackedVector2Array([
+		Vector2(tail_anchor_x - 13.0, bubble_rect.end.y - 3.0),
+		Vector2(tail_anchor_x + 13.0, bubble_rect.end.y - 3.0),
+		speaker_point,
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(tail_anchor_x - 13.0, bubble_rect.end.y - 1.0),
+		speaker_point,
+		Vector2(tail_anchor_x + 13.0, bubble_rect.end.y - 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(22)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	bubble_style.shadow_size = 7
+	bubble_style.shadow_offset = Vector2(0.0, 5.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	var lines := [
+		"Oh... You are right. I don't know",
+		"why I even said that.",
+	]
+	for line_index in lines.size():
+		draw_string(
+			OPENING_CAPTION_FONT,
+			Vector2(bubble_rect.position.x + 20.0, bubble_rect.position.y + 48.0 + float(line_index) * 43.0),
+			lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - 40.0,
+			29,
+			ink_color
+		)
+
+
+func draw_opening_skinny_raft_preview() -> void:
+	draw_texture_cover(OPENING_SKINNY_BOY_RAFT, Rect2(Vector2.ZERO, VIEW_SIZE))
+
+	var bubble_rect := Rect2(24.0, 48.0, 672.0, 176.0)
+	var bubble_color := Color(1.0, 0.975, 0.90, 0.97)
+	var ink_color := Color(0.055, 0.11, 0.14)
+	var speaker_point := Vector2(300.0, 310.0)
+	var tail_anchor_x := 300.0
+	var tail_points := PackedVector2Array([
+		Vector2(tail_anchor_x - 13.0, bubble_rect.end.y - 3.0),
+		Vector2(tail_anchor_x + 13.0, bubble_rect.end.y - 3.0),
+		speaker_point,
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(tail_anchor_x - 13.0, bubble_rect.end.y - 1.0),
+		speaker_point,
+		Vector2(tail_anchor_x + 13.0, bubble_rect.end.y - 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(22)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	bubble_style.shadow_size = 7
+	bubble_style.shadow_offset = Vector2(0.0, 5.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	var lines := [
+		"Rob... There is perfectly enough space",
+		"for both of us to survive.",
+		"Nobody needs to let go.",
+	]
+	for line_index in lines.size():
+		draw_string(
+			OPENING_CAPTION_FONT,
+			Vector2(bubble_rect.position.x + 20.0, bubble_rect.position.y + 48.0 + float(line_index) * 43.0),
+			lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - 40.0,
+			29,
+			ink_color
+		)
+
+
+func draw_opening_fat_raft_preview() -> void:
+	draw_texture_cover(OPENING_FAT_BOY_RAFT, Rect2(Vector2.ZERO, VIEW_SIZE))
+
+	var bubble_rect := Rect2(28.0, 350.0, 664.0, 176.0)
+	var bubble_color := Color(0.96, 0.985, 1.0, 0.97)
+	var ink_color := Color(0.055, 0.11, 0.14)
+	var speaker_point := Vector2(405.0, 650.0)
+	var tail_anchor_x := 410.0
+	var tail_points := PackedVector2Array([
+		Vector2(tail_anchor_x - 13.0, bubble_rect.end.y - 3.0),
+		Vector2(tail_anchor_x + 13.0, bubble_rect.end.y - 3.0),
+		speaker_point,
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(tail_anchor_x - 13.0, bubble_rect.end.y - 1.0),
+		speaker_point,
+		Vector2(tail_anchor_x + 13.0, bubble_rect.end.y - 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(22)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	bubble_style.shadow_size = 7
+	bubble_style.shadow_offset = Vector2(0.0, 5.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	var lines := [
+		"You will survive, Jack! Promise me that.",
+		"I am letting go of this raft so at least",
+		"one of us can live.",
+	]
+	for line_index in lines.size():
+		draw_string(
+			OPENING_CAPTION_FONT,
+			Vector2(bubble_rect.position.x + 20.0, bubble_rect.position.y + 48.0 + float(line_index) * 43.0),
+			lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - 40.0,
+			29,
+			ink_color
+		)
+
+
+func draw_opening_raft_preview() -> void:
+	draw_texture_cover(OPENING_RAFT_BACKGROUND, Rect2(Vector2.ZERO, VIEW_SIZE))
+
+	var bob := sin(state_time * 2.457) * 4.2
+	var roll := deg_to_rad(1.8) * sin(state_time * 1.638)
+	var texture_size := OPENING_BOYS_AND_RAFT.get_size()
+	var raft_width := VIEW_SIZE.x * 0.94
+	var raft_size := Vector2(raft_width, raft_width * texture_size.y / texture_size.x)
+	var raft_center := Vector2(VIEW_SIZE.x * 0.5, VIEW_SIZE.y * 0.68 + bob)
+	draw_set_transform(raft_center, roll, Vector2.ONE)
+	draw_texture_rect(OPENING_BOYS_AND_RAFT, Rect2(-raft_size * 0.5, raft_size), false)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_opening_raft_caption()
+
+
+func draw_opening_raft_caption() -> void:
+	var panel_rect := Rect2(24.0, 72.0, 672.0, 112.0)
+	draw_rect(
+		Rect2(panel_rect.position + Vector2(0.0, 6.0), panel_rect.size),
+		Color(0.01, 0.05, 0.08, 0.30)
+	)
+	draw_rect(panel_rect, Color(0.02, 0.12, 0.18, 0.76))
+	var trim_color := Color(0.94, 0.79, 0.54, 0.82)
+	draw_line(panel_rect.position + Vector2(14.0, 5.0), Vector2(panel_rect.end.x - 14.0, panel_rect.position.y + 5.0), trim_color, 2.0)
+	draw_line(Vector2(panel_rect.position.x + 14.0, panel_rect.end.y - 5.0), panel_rect.end - Vector2(14.0, 5.0), trim_color, 2.0)
+	var caption_lines := [
+		"As the boys hold onto the raft,",
+		"the current carries them in an unknown direction...",
+	]
+	for line_index in caption_lines.size():
+		var text_position := Vector2(panel_rect.position.x + 16.0, panel_rect.position.y + 45.0 + float(line_index) * 38.0)
+		var text_width := panel_rect.size.x - 32.0
+		draw_string(
+			OPENING_CAPTION_FONT,
+			text_position + Vector2(2.0, 3.0),
+			caption_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			text_width,
+			27,
+			Color(0.0, 0.0, 0.0, 0.68)
+		)
+		draw_string(
+			OPENING_CAPTION_FONT,
+			text_position,
+			caption_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			text_width,
+			27,
+			Color(1.0, 0.95, 0.84)
+		)
 
 
 func draw_opening() -> void:
@@ -1283,6 +1612,21 @@ func draw_opening() -> void:
 	else:
 		var deck_time := state_time - static_start
 		var damaged_start := OPENING_IMPACT_TIME + OPENING_IMPACT_DURATION
+		var captain_start := damaged_start + OPENING_DAMAGED_TRANSITION_DURATION + OPENING_DAMAGED_TURN_DURATION
+		var passengers_start := captain_start + OPENING_CAPTAIN_TRANSITION_DURATION + OPENING_CAPTAIN_HOLD_DURATION
+		var passengers_active_start := passengers_start + OPENING_PASSENGERS_TRANSITION_DURATION
+		var breakup_start := passengers_active_start + OPENING_PASSENGERS_HOLD_DURATION
+		var breakup_active_start := breakup_start + OPENING_BREAKUP_TRANSITION_DURATION
+		var planks_start := breakup_active_start + OPENING_BREAKUP_DURATION
+		var raft_transition_start := planks_start + OPENING_PLANKS_HOLD_DURATION
+		var raft_start := raft_transition_start + OPENING_RAFT_TRANSITION_DURATION
+		var fat_raft_transition_start := raft_start + OPENING_RAFT_HOLD_DURATION
+		var fat_raft_start := fat_raft_transition_start + OPENING_FAT_RAFT_TRANSITION_DURATION
+		var skinny_raft_transition_start := fat_raft_start + OPENING_FAT_RAFT_HOLD_DURATION
+		var skinny_raft_start := skinny_raft_transition_start + OPENING_SKINNY_RAFT_TRANSITION_DURATION
+		var fat_raft2_transition_start := skinny_raft_start + OPENING_SKINNY_RAFT_HOLD_DURATION
+		var fat_raft2_start := fat_raft2_transition_start + OPENING_FAT_RAFT2_TRANSITION_DURATION
+		var end_fade_start := fat_raft2_start + OPENING_FAT_RAFT2_HOLD_DURATION
 		if deck_time < damaged_start:
 			draw_opening_ship_scene(1.0)
 		elif deck_time < damaged_start + OPENING_DAMAGED_TRANSITION_DURATION:
@@ -1297,10 +1641,112 @@ func draw_opening() -> void:
 			)
 			draw_opening_ship_scene(1.0 - damaged_transition)
 			draw_opening_damaged_scene(damaged_transition, deck_time - damaged_start)
-		else:
+		elif deck_time < captain_start:
 			draw_opening_damaged_scene(1.0, deck_time - damaged_start)
+		elif deck_time < captain_start + OPENING_CAPTAIN_TRANSITION_DURATION:
+			var captain_transition := smoothstep(
+				0.0,
+				1.0,
+				clampf(
+					(deck_time - captain_start) / OPENING_CAPTAIN_TRANSITION_DURATION,
+					0.0,
+					1.0
+				)
+			)
+			draw_opening_damaged_scene(1.0 - captain_transition, deck_time - damaged_start)
+			draw_opening_captain_scene(captain_transition)
+		elif deck_time < passengers_start:
+			draw_opening_captain_scene(1.0)
+		elif deck_time < passengers_active_start:
+			var passengers_transition := smoothstep(
+				0.0,
+				1.0,
+				clampf(
+					(deck_time - passengers_start) / OPENING_PASSENGERS_TRANSITION_DURATION,
+					0.0,
+					1.0
+				)
+			)
+			draw_opening_captain_scene(1.0 - passengers_transition)
+			draw_opening_passengers_scene(passengers_transition, deck_time - passengers_start)
+		elif deck_time < breakup_start:
+			draw_opening_passengers_scene(1.0, deck_time - passengers_start)
+		elif deck_time < breakup_active_start:
+			var breakup_transition := smoothstep(
+				0.0,
+				1.0,
+				clampf(
+					(deck_time - breakup_start) / OPENING_BREAKUP_TRANSITION_DURATION,
+					0.0,
+					1.0
+				)
+			)
+			draw_opening_passengers_scene(1.0 - breakup_transition, deck_time - passengers_start)
+			draw_opening_breakup_scene(breakup_transition, 0.0)
+		elif deck_time < planks_start:
+			draw_opening_breakup_scene(1.0, deck_time - breakup_active_start)
+		elif deck_time < raft_transition_start:
+			draw_opening_planks_scene(
+				1.0,
+				deck_time - breakup_active_start - OPENING_BREAKUP_SWAP_TIME
+			)
+		elif deck_time < raft_start:
+			var transition_time := deck_time - raft_transition_start
+			if transition_time < OPENING_RAFT_TRANSITION_DURATION * 0.5:
+				draw_opening_planks_scene(1.0, deck_time - breakup_active_start - OPENING_BREAKUP_SWAP_TIME)
+			else:
+				draw_opening_raft_preview()
+			draw_opening_black_transition(transition_time, OPENING_RAFT_TRANSITION_DURATION)
+		elif deck_time < fat_raft_transition_start:
+			draw_opening_raft_preview()
+		elif deck_time < fat_raft_start:
+			var transition_time := deck_time - fat_raft_transition_start
+			if transition_time < OPENING_FAT_RAFT_TRANSITION_DURATION * 0.5:
+				draw_opening_raft_preview()
+			else:
+				draw_opening_fat_raft_preview()
+			draw_opening_black_transition(transition_time, OPENING_FAT_RAFT_TRANSITION_DURATION)
+		elif deck_time < skinny_raft_transition_start:
+			draw_opening_fat_raft_preview()
+		elif deck_time < skinny_raft_start:
+			var transition_time := deck_time - skinny_raft_transition_start
+			if transition_time < OPENING_SKINNY_RAFT_TRANSITION_DURATION * 0.5:
+				draw_opening_fat_raft_preview()
+			else:
+				draw_opening_skinny_raft_preview()
+			draw_opening_black_transition(transition_time, OPENING_SKINNY_RAFT_TRANSITION_DURATION)
+		elif deck_time < fat_raft2_transition_start:
+			draw_opening_skinny_raft_preview()
+		elif deck_time < fat_raft2_start:
+			var transition_time := deck_time - fat_raft2_transition_start
+			if transition_time < OPENING_FAT_RAFT2_TRANSITION_DURATION * 0.5:
+				draw_opening_skinny_raft_preview()
+			else:
+				draw_opening_fat_raft2_preview()
+			draw_opening_black_transition(transition_time, OPENING_FAT_RAFT2_TRANSITION_DURATION)
+		else:
+			draw_opening_fat_raft2_preview()
+			if deck_time >= end_fade_start:
+				var fade_progress := smoothstep(
+					0.0,
+					1.0,
+					clampf((deck_time - end_fade_start) / OPENING_END_FADE_DURATION, 0.0, 1.0)
+				)
+				draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.0, 0.0, 0.0, fade_progress))
 
-	draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94)
+	if state_time < static_start:
+		draw_opening_exterior_caption(1.0)
+	draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94, 33)
+
+
+func draw_opening_black_transition(transition_time: float, duration: float) -> void:
+	var ratio := clampf(transition_time / duration, 0.0, 1.0)
+	var black_alpha := 0.0
+	if ratio < 0.5:
+		black_alpha = smoothstep(0.0, 1.0, ratio * 2.0)
+	else:
+		black_alpha = 1.0 - smoothstep(0.0, 1.0, (ratio - 0.5) * 2.0)
+	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.0, 0.0, 0.0, black_alpha))
 
 
 func draw_opening_exterior_ship(alpha: float) -> void:
@@ -1317,23 +1763,22 @@ func draw_opening_exterior_ship(alpha: float) -> void:
 	draw_set_transform(ship_center, sin(state_time * 1.05) * 0.006, Vector2.ONE)
 	draw_texture_rect(OPENING_EXTERIOR_SHIP, Rect2(-ship_size * 0.5, ship_size), false, tint)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	draw_opening_exterior_caption(tint.a)
 
 
 func draw_opening_exterior_caption(alpha: float) -> void:
 	var fade_in := smoothstep(0.0, 1.0, clampf(state_time / 0.55, 0.0, 1.0))
-	var fade_out_start := OPENING_EXTERIOR_DURATION - OPENING_EXTERIOR_TRANSITION_DURATION
+	var fade_out_start := OPENING_EXTERIOR_DURATION + OPENING_PAN_DURATION
 	var fade_out := 1.0 - smoothstep(
 		0.0,
 		1.0,
 		clampf(
-			(state_time - fade_out_start) / OPENING_EXTERIOR_TRANSITION_DURATION,
+			(state_time - fade_out_start) / OPENING_TRANSITION_DURATION,
 			0.0,
 			1.0
 		)
 	)
 	var caption_alpha := clampf(alpha * fade_in * fade_out, 0.0, 1.0)
-	var panel_rect := Rect2(26.0, 111.0, 668.0, 70.0)
+	var panel_rect := Rect2(26.0, 96.0, 668.0, 108.0)
 	draw_rect(
 		Rect2(panel_rect.position + Vector2(0.0, 6.0), panel_rect.size),
 		Color(0.01, 0.05, 0.08, 0.30 * caption_alpha)
@@ -1342,27 +1787,31 @@ func draw_opening_exterior_caption(alpha: float) -> void:
 	var trim_color := Color(0.94, 0.79, 0.54, 0.82 * caption_alpha)
 	draw_line(panel_rect.position + Vector2(14.0, 5.0), Vector2(panel_rect.end.x - 14.0, panel_rect.position.y + 5.0), trim_color, 2.0)
 	draw_line(Vector2(panel_rect.position.x + 14.0, panel_rect.end.y - 5.0), panel_rect.end - Vector2(14.0, 5.0), trim_color, 2.0)
-	var text_position := Vector2(panel_rect.position.x + 16.0, panel_rect.position.y + 45.0)
 	var text_width := panel_rect.size.x - 32.0
-	var caption := "Passengers traveling on a luxury cruise towards Bermudas..."
-	draw_string(
-		OPENING_CAPTION_FONT,
-		text_position + Vector2(2.0, 3.0),
-		caption,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		text_width,
-		21,
-		Color(0.0, 0.0, 0.0, 0.68 * caption_alpha)
-	)
-	draw_string(
-		OPENING_CAPTION_FONT,
-		text_position,
-		caption,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		text_width,
-		21,
-		Color(1.0, 0.95, 0.84, caption_alpha)
-	)
+	var caption_lines := [
+		"Passengers traveling on a luxury cruise",
+		"towards Bermudas...",
+	]
+	for line_index in caption_lines.size():
+		var text_position := Vector2(panel_rect.position.x + 16.0, panel_rect.position.y + 44.0 + float(line_index) * 38.0)
+		draw_string(
+			OPENING_CAPTION_FONT,
+			text_position + Vector2(2.0, 3.0),
+			caption_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			text_width,
+			27,
+			Color(0.0, 0.0, 0.0, 0.68 * caption_alpha)
+		)
+		draw_string(
+			OPENING_CAPTION_FONT,
+			text_position,
+			caption_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			text_width,
+			27,
+			Color(1.0, 0.95, 0.84, caption_alpha)
+		)
 
 
 func draw_opening_damaged_scene(alpha: float, damaged_time: float) -> void:
@@ -1385,8 +1834,401 @@ func draw_opening_damaged_scene(alpha: float, damaged_time: float) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	var glacier_size := Vector2(310.0, 310.0)
-	var glacier_center := Vector2(128.0, 790.0 + sin(state_time * 0.85) * 2.0)
+	var glacier_center := Vector2(278.0, 790.0 + sin(state_time * 0.85) * 2.0)
 	draw_texture_rect(OPENING_GLACIER, Rect2(glacier_center - glacier_size * 0.5, glacier_size), false, tint)
+
+
+func draw_opening_captain_scene(alpha: float) -> void:
+	var tint := Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0))
+	draw_texture_cover(OPENING_CAPTAIN, Rect2(Vector2.ZERO, VIEW_SIZE), tint)
+	draw_opening_captain_dialogue(tint.a)
+
+
+func draw_opening_captain_dialogue(alpha: float) -> void:
+	var bubble_alpha := clampf(alpha, 0.0, 1.0)
+	var bubble_rect := Rect2(14.0, 20.0, 314.0, 245.0)
+	var bubble_color := Color(1.0, 0.975, 0.90, 0.97 * bubble_alpha)
+	var ink_color := Color(0.055, 0.11, 0.14, bubble_alpha)
+	var speaker_point := Vector2(367.0, 330.0)
+	var tail_points := PackedVector2Array([
+		speaker_point,
+		Vector2(bubble_rect.end.x - 62.0, bubble_rect.end.y - 3.0),
+		Vector2(bubble_rect.end.x - 28.0, bubble_rect.end.y - 3.0),
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(bubble_rect.end.x - 62.0, bubble_rect.end.y - 1.0),
+		speaker_point,
+		Vector2(bubble_rect.end.x - 28.0, bubble_rect.end.y - 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(22)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.25 * bubble_alpha)
+	bubble_style.shadow_size = 7
+	bubble_style.shadow_offset = Vector2(0.0, 5.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	var lines := [
+		"An iceberg in the",
+		"tropical seas?! It...",
+		"it cannot be. Hark!",
+		"Run for ye lives!!",
+	]
+	for line_index in lines.size():
+		draw_string(
+			OPENING_CAPTION_FONT,
+			Vector2(bubble_rect.position.x + 16.0, bubble_rect.position.y + 51.0 + float(line_index) * 47.0),
+			lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - 32.0,
+			29,
+			ink_color
+		)
+
+
+func draw_opening_breakup_scene(alpha: float, breakup_time: float) -> void:
+	var scene_alpha := clampf(alpha, 0.0, 1.0)
+	var ship_visible := breakup_time < OPENING_BREAKUP_SWAP_TIME
+	if ship_visible:
+		var shake_ramp := smoothstep(
+			0.0,
+			1.0,
+			clampf(breakup_time / OPENING_BREAKUP_SMOKE_START, 0.0, 1.0)
+		)
+		var shake_strength := lerpf(1.8, 6.0, shake_ramp)
+		var ship_center := Vector2(360.0, 445.0) + Vector2(
+			sin(breakup_time * 21.0) * shake_strength,
+			cos(breakup_time * 25.0) * shake_strength * 0.55
+		)
+		var ship_rotation := sin(breakup_time * 18.0) * lerpf(0.004, 0.014, shake_ramp)
+		var ship_width := VIEW_SIZE.x * 0.76
+		var ship_size := Vector2(
+			ship_width,
+			ship_width * OPENING_DAMAGED_SHIP.get_height() / OPENING_DAMAGED_SHIP.get_width()
+		)
+		draw_set_transform(ship_center, ship_rotation, Vector2.ONE)
+		draw_texture_rect(
+			OPENING_DAMAGED_SHIP,
+			Rect2(-ship_size * 0.5, ship_size),
+			false,
+			Color(1.0, 1.0, 1.0, scene_alpha)
+		)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		draw_opening_planks_scene(
+			scene_alpha,
+			breakup_time - OPENING_BREAKUP_SWAP_TIME
+		)
+
+	if breakup_time >= OPENING_BREAKUP_SMOKE_START:
+		draw_opening_breakup_smoke(breakup_time, scene_alpha)
+
+
+func draw_opening_breakup_smoke(breakup_time: float, scene_alpha: float) -> void:
+	var build_progress := smoothstep(
+		0.0,
+		1.0,
+		clampf(
+			(breakup_time - OPENING_BREAKUP_SMOKE_START) /
+			(OPENING_BREAKUP_SWAP_TIME - OPENING_BREAKUP_SMOKE_START),
+			0.0,
+			1.0
+		)
+	)
+	var clear_progress := smoothstep(
+		0.0,
+		1.0,
+		clampf(
+			(breakup_time - OPENING_BREAKUP_SWAP_TIME) /
+			(OPENING_BREAKUP_DURATION - OPENING_BREAKUP_SWAP_TIME),
+			0.0,
+			1.0
+		)
+	)
+	var smoke_alpha := build_progress * (1.0 - clear_progress) * scene_alpha
+	var smoke_origin := Vector2(245.0, 500.0)
+	for smoke_index in 42:
+		var index_value := float(smoke_index)
+		var horizontal_seed := fposmod(sin((index_value + 1.0) * 12.9898) * 43758.5453, 1.0) * 2.0 - 1.0
+		var vertical_seed := fposmod(sin((index_value + 7.0) * 78.233) * 12515.873, 1.0) * 2.0 - 1.0
+		var cloud_target := Vector2(360.0, 445.0) + Vector2(horizontal_seed * 270.0, vertical_seed * 145.0)
+		var cloud_position := smoke_origin.lerp(cloud_target, build_progress)
+		cloud_position += Vector2(
+			horizontal_seed * clear_progress * 115.0,
+			-clear_progress * (75.0 + absf(vertical_seed) * 55.0)
+		)
+		cloud_position += Vector2(
+			sin(breakup_time * 1.4 + index_value) * 5.0,
+			cos(breakup_time * 1.1 + index_value * 1.7) * 4.0
+		)
+		var radius_seed := fposmod(sin((index_value + 3.0) * 39.3467) * 24634.6345, 1.0)
+		var radius := lerpf(38.0, 72.0, radius_seed) * lerpf(0.45, 1.0, build_progress)
+		var dark_smoke := Color(0.20, 0.25, 0.27, smoke_alpha * 0.68)
+		var light_smoke := Color(0.62, 0.66, 0.66, smoke_alpha * 0.80)
+		draw_circle(cloud_position + Vector2(3.0, 6.0), radius * 1.05, dark_smoke)
+		draw_circle(cloud_position, radius, light_smoke)
+		draw_circle(
+			cloud_position - Vector2(radius * 0.20, radius * 0.24),
+			radius * 0.55,
+			Color(0.82, 0.84, 0.82, smoke_alpha * 0.42)
+		)
+
+
+func draw_opening_planks_scene(alpha: float, debris_time: float) -> void:
+	var tint := Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0))
+	for plank_index in OPENING_PLANK_LAYOUT.size():
+		var plank: Dictionary = OPENING_PLANK_LAYOUT[plank_index]
+		var phase := float(plank_index) * 1.37
+		var bob_offset := Vector2(
+			sin(debris_time * 0.72 + phase) * 2.2,
+			sin(debris_time * 1.08 + phase) * 4.0
+		)
+		var rotation: float = plank["rotation"] + sin(debris_time * 0.62 + phase) * 0.025
+		var plank_size := Vector2.ONE * float(plank["size"])
+		draw_set_transform(plank["position"] + bob_offset, rotation, Vector2.ONE)
+		draw_texture_rect(OPENING_PLANKS, Rect2(-plank_size * 0.5, plank_size), false, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func draw_opening_passengers_scene(alpha: float, scene_time: float) -> void:
+	var scene_alpha := clampf(alpha, 0.0, 1.0)
+	var tint := Color(1.0, 1.0, 1.0, scene_alpha)
+	var ship_pivot := Vector2(360.0, 900.0)
+	var ship_roll := deg_to_rad(4.0) * sin(scene_time * 0.90)
+	draw_texture_cover(OPENING_PASSENGER_BACKGROUND, Rect2(Vector2.ZERO, VIEW_SIZE), tint)
+	var ship_target := Rect2(-60.0, VIEW_SIZE.y * 0.30 + 30.0, VIEW_SIZE.x + 120.0, VIEW_SIZE.y * 0.70)
+	var ship_texture_size := OPENING_PASSENGER_SHIP.get_size()
+	var usable_ship_height := ship_texture_size.y * 0.75
+	var ship_source_width := usable_ship_height * ship_target.size.x / ship_target.size.y
+	var ship_source := Rect2(
+		(ship_texture_size.x - ship_source_width) * 0.5,
+		0.0,
+		ship_source_width,
+		usable_ship_height
+	)
+	var ship_transform_origin := ship_pivot - ship_pivot.rotated(ship_roll)
+	draw_set_transform(ship_transform_origin, ship_roll, Vector2.ONE)
+	draw_texture_rect_region(
+		OPENING_PASSENGER_SHIP,
+		ship_target,
+		ship_source,
+		tint
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	var man_rect := Rect2(120.0, 580.0, 280.0, 420.0)
+	var man_center := ship_pivot + (man_rect.get_center() - ship_pivot).rotated(ship_roll)
+	var breath_scale := 1.0 + sin(scene_time * 1.8) * 0.03
+	draw_set_transform(man_center, ship_roll, Vector2.ONE * breath_scale)
+	draw_texture_rect(
+		OPENING_PASSENGER_MAN,
+		Rect2(-man_rect.size * 0.5, man_rect.size),
+		false,
+		tint
+	)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	var woman2_move_offset := Vector2(
+		36.0 - fposmod(scene_time * 50.0, 940.0),
+		sin(scene_time * 2.90 + 2.8) * 2.2
+	)
+	draw_opening_layered_woman(
+		OPENING_WOMAN_2,
+		OPENING_WOMAN_2_RIGHT_ARM,
+		OPENING_WOMAN_2_LEFT_ARM,
+		Rect2(410.0, 580.0, 270.0, 405.0),
+		Vector2(0.330, 0.285),
+		Vector2(0.550, 0.300),
+		Vector2(0.880, 0.100),
+		Vector2(0.150, 0.095),
+		Vector2(-6.0, 5.0),
+		Vector2(-9.0, -5.0),
+		0.35,
+		0.35,
+		0.0,
+		0.0,
+		woman2_move_offset,
+		false,
+		false,
+		true,
+		ship_pivot,
+		ship_roll,
+		tint
+	)
+	var woman1_run_phase := scene_time * 27.04
+	var woman1_run_offset := Vector2(
+		fposmod(scene_time * 141.96, 940.0) - 103.0,
+		sin(woman1_run_phase) * 5.0
+	)
+	draw_opening_layered_woman(
+		OPENING_WOMAN_1,
+		OPENING_WOMAN_1_RIGHT_ARM,
+		OPENING_WOMAN_1_LEFT_ARM,
+		Rect2(-53.0, 701.0, 459.0, 686.0),
+		Vector2(0.475, 0.280),
+		Vector2(0.665, 0.285),
+		Vector2(0.820, 0.830),
+		Vector2(0.400, 0.180),
+		Vector2(2.0, -9.0),
+		Vector2(33.0, 14.0),
+		0.34125,
+		0.4275,
+		sin(woman1_run_phase) * 0.16,
+		-sin(woman1_run_phase) * 0.16,
+		woman1_run_offset,
+		false,
+		true,
+		false,
+		ship_pivot,
+		ship_roll,
+		tint
+	)
+
+	# A separate, oversized rail sits in the foreground. Its bottom edge is just
+	# outside the viewport, so it feels close to the camera and covers the feet.
+	var rail_center_base := Vector2(360.0, 1095.0)
+	var rail_center := ship_pivot + (rail_center_base - ship_pivot).rotated(ship_roll)
+	draw_set_transform(rail_center, deg_to_rad(-10.0) + ship_roll, Vector2.ONE)
+	draw_texture_rect(OPENING_RAIL, Rect2(-750.0, -250.0, 1500.0, 500.0), false, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func draw_opening_layered_woman(
+	body_texture: Texture2D,
+	left_arm_texture: Texture2D,
+	right_arm_texture: Texture2D,
+	character_rect: Rect2,
+	left_shoulder: Vector2,
+	right_shoulder: Vector2,
+	left_arm_socket: Vector2,
+	right_arm_socket: Vector2,
+	left_arm_seam_offset: Vector2,
+	right_arm_seam_offset: Vector2,
+	left_arm_scale: float,
+	right_arm_scale: float,
+	left_arm_rotation: float,
+	right_arm_rotation: float,
+	offset: Vector2,
+	draw_shoulder_patches: bool,
+	left_arm_in_front: bool,
+	right_arm_in_front: bool,
+	world_pivot: Vector2,
+	world_rotation: float,
+	tint: Color
+) -> void:
+	var base_center := character_rect.get_center() + offset
+	var character_center := world_pivot + (base_center - world_pivot).rotated(world_rotation)
+	if not left_arm_in_front:
+		draw_opening_aligned_arm(
+			left_arm_texture,
+			character_center,
+			character_rect.size,
+			world_rotation,
+			left_shoulder,
+			left_arm_socket,
+			left_arm_seam_offset,
+			left_arm_scale,
+			left_arm_rotation,
+			tint
+		)
+	if not right_arm_in_front:
+		draw_opening_aligned_arm(
+			right_arm_texture,
+			character_center,
+			character_rect.size,
+			world_rotation,
+			right_shoulder,
+			right_arm_socket,
+			right_arm_seam_offset,
+			right_arm_scale,
+			right_arm_rotation,
+			tint
+		)
+	draw_set_transform(character_center, world_rotation, Vector2.ONE)
+	draw_texture_rect(body_texture, Rect2(-character_rect.size * 0.5, character_rect.size), false, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if draw_shoulder_patches:
+		draw_opening_shoulder_patch(character_center, character_rect.size, world_rotation, left_shoulder, -0.18, tint.a)
+		draw_opening_shoulder_patch(character_center, character_rect.size, world_rotation, right_shoulder, 0.18, tint.a)
+	if left_arm_in_front:
+		draw_opening_aligned_arm(
+			left_arm_texture,
+			character_center,
+			character_rect.size,
+			world_rotation,
+			left_shoulder,
+			left_arm_socket,
+			left_arm_seam_offset,
+			left_arm_scale,
+			left_arm_rotation,
+			tint
+		)
+	if right_arm_in_front:
+		draw_opening_aligned_arm(
+			right_arm_texture,
+			character_center,
+			character_rect.size,
+			world_rotation,
+			right_shoulder,
+			right_arm_socket,
+			right_arm_seam_offset,
+			right_arm_scale,
+			right_arm_rotation,
+			tint
+		)
+
+
+func draw_opening_aligned_arm(
+	arm_texture: Texture2D,
+	character_center: Vector2,
+	character_size: Vector2,
+	character_rotation: float,
+	shoulder: Vector2,
+	arm_socket: Vector2,
+	seam_offset: Vector2,
+	arm_scale: float,
+	arm_rotation: float,
+	tint: Color
+) -> void:
+	var arm_height := character_size.y * arm_scale
+	var arm_size := Vector2(
+		arm_height * arm_texture.get_width() / arm_texture.get_height(),
+		arm_height
+	)
+	var shoulder_local := character_size * (shoulder - Vector2(0.5, 0.5)) + seam_offset
+	var shoulder_position := character_center + shoulder_local.rotated(character_rotation)
+	var arm_rect := Rect2(-arm_size * arm_socket, arm_size)
+	draw_set_transform(shoulder_position, character_rotation + arm_rotation, Vector2.ONE)
+	draw_texture_rect(arm_texture, arm_rect, false, tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func draw_opening_shoulder_patch(character_center: Vector2, character_size: Vector2, character_rotation: float, shoulder: Vector2, rotation: float, alpha: float) -> void:
+	var shoulder_local := character_size * (shoulder - Vector2(0.5, 0.5))
+	var center := character_center + shoulder_local.rotated(character_rotation)
+	var patch_scale := character_size.y / 620.0
+	draw_set_transform(center, character_rotation + rotation, Vector2(0.86, 1.18) * patch_scale)
+	draw_circle(Vector2.ZERO, 25.0, Color(0.48, 0.38, 0.26, alpha * 0.82))
+	draw_circle(Vector2.ZERO, 22.5, Color(0.94, 0.87, 0.70, alpha))
+	var fold_color := Color(0.67, 0.56, 0.42, alpha * 0.64)
+	for fold_index in range(-2, 3):
+		var fold_x := float(fold_index) * 7.0
+		draw_polyline(
+			PackedVector2Array([
+				Vector2(fold_x, -18.0),
+				Vector2(fold_x * 0.62, 0.0),
+				Vector2(fold_x * 0.34, 18.0),
+			]),
+			fold_color,
+			1.35,
+			true
+		)
+	draw_arc(Vector2.ZERO, 18.2, 0.25, 2.90, 20, Color(0.48, 0.61, 0.68, alpha * 0.50), 1.7, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func draw_opening_party_pan(progress: float, alpha: float = 1.0) -> void:
@@ -1425,7 +2267,7 @@ func draw_opening_ship_scene(alpha: float) -> void:
 	nerd_head_rect.position.y += 20.0
 	var fat_body_rect := transform_character_rect(Rect2(330.0, 390.0, 390.0, 520.0), Vector2(525.0, 910.0), character_scale, fat_offset)
 	var fat_head_rect := transform_character_rect(Rect2(375.0, 175.0, 300.0, 300.0), Vector2(525.0, 910.0), character_scale, fat_offset)
-	var scared_faces_visible := deck_time >= OPENING_IMPACT_TIME + OPENING_IMPACT_DURATION * 0.5
+	var scared_faces_visible := deck_time >= OPENING_IMPACT_TIME + OPENING_IMPACT_DURATION * 0.25
 	var nerd_head_texture := OPENING_NERD_SCARED_HEAD if scared_faces_visible else OPENING_NERD_HEAD
 	var fat_head_texture := OPENING_FAT_SCARED_HEAD if scared_faces_visible else OPENING_FAT_HEAD
 	draw_opening_character(
@@ -1451,6 +2293,34 @@ func draw_opening_ship_scene(alpha: float) -> void:
 
 func opening_deck_start_time() -> float:
 	return OPENING_EXTERIOR_DURATION + OPENING_PAN_DURATION + OPENING_TRANSITION_DURATION
+
+
+func opening_passengers_deck_time() -> float:
+	return (
+		OPENING_IMPACT_TIME + OPENING_IMPACT_DURATION +
+		OPENING_DAMAGED_TRANSITION_DURATION + OPENING_DAMAGED_TURN_DURATION +
+		OPENING_CAPTAIN_TRANSITION_DURATION + OPENING_CAPTAIN_HOLD_DURATION
+	)
+
+
+func opening_breakup_deck_time() -> float:
+	return opening_passengers_deck_time() + OPENING_PASSENGERS_TRANSITION_DURATION + OPENING_PASSENGERS_HOLD_DURATION
+
+
+func opening_planks_deck_time() -> float:
+	return opening_breakup_deck_time() + OPENING_BREAKUP_TRANSITION_DURATION + OPENING_BREAKUP_DURATION
+
+
+func opening_total_duration() -> float:
+	return (
+		opening_deck_start_time() + opening_planks_deck_time() +
+		OPENING_PLANKS_HOLD_DURATION +
+		OPENING_RAFT_TRANSITION_DURATION + OPENING_RAFT_HOLD_DURATION +
+		OPENING_FAT_RAFT_TRANSITION_DURATION + OPENING_FAT_RAFT_HOLD_DURATION +
+		OPENING_SKINNY_RAFT_TRANSITION_DURATION + OPENING_SKINNY_RAFT_HOLD_DURATION +
+		OPENING_FAT_RAFT2_TRANSITION_DURATION + OPENING_FAT_RAFT2_HOLD_DURATION +
+		OPENING_END_FADE_DURATION
+	)
 
 
 func draw_opening_dialogue(deck_time: float, scene_alpha: float) -> void:
@@ -1504,15 +2374,15 @@ func draw_opening_dialogue(deck_time: float, scene_alpha: float) -> void:
 
 	var entrance := smoothstep(0.0, 1.0, clampf((deck_time - dialogue_started_at) / 0.20, 0.0, 1.0))
 	var bubble_alpha := scene_alpha * entrance
-	var dialogue_font_size := 22
+	var dialogue_font_size := 29
 	var widest_line := 0.0
 	for line in lines:
 		widest_line = maxf(
 			widest_line,
 			OPENING_CAPTION_FONT.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1.0, dialogue_font_size).x
 		)
-	var bubble_width := clampf(widest_line + 58.0, 245.0, VIEW_SIZE.x - 48.0)
-	var bubble_height := 42.0 + float(lines.size()) * 29.0
+	var bubble_width := clampf(widest_line + 68.0, 280.0, VIEW_SIZE.x - 48.0)
+	var bubble_height := 48.0 + float(lines.size()) * 37.0
 	var speaker_point := Vector2(200.0, 472.0) if nerd_is_speaking else Vector2(525.0, 448.0)
 	var bubble_x := clampf(
 		speaker_point.x - bubble_width * 0.5,
@@ -1551,11 +2421,11 @@ func draw_opening_dialogue(deck_time: float, scene_alpha: float) -> void:
 	bubble_style.shadow_offset = Vector2(0.0, 5.0)
 	draw_style_box(bubble_style, bubble_rect)
 
-	var first_baseline := bubble_rect.position.y + 34.0
+	var first_baseline := bubble_rect.position.y + 41.0
 	for line_index in lines.size():
 		draw_string(
 			OPENING_CAPTION_FONT,
-			Vector2(bubble_rect.position.x + 20.0, first_baseline + float(line_index) * 30.0),
+			Vector2(bubble_rect.position.x + 20.0, first_baseline + float(line_index) * 38.0),
 			lines[line_index],
 			HORIZONTAL_ALIGNMENT_CENTER,
 			bubble_rect.size.x - 40.0,
@@ -1581,6 +2451,11 @@ func draw_opening_character(body_texture: Texture2D, head_texture: Texture2D, bo
 
 
 func draw_texture_cover(texture: Texture2D, target_rect: Rect2, tint: Color = Color.WHITE, horizontal_zoom_out: float = 1.0) -> void:
+	var source_rect := texture_cover_source_rect(texture, target_rect, horizontal_zoom_out)
+	draw_texture_rect_region(texture, target_rect, source_rect, tint)
+
+
+func texture_cover_source_rect(texture: Texture2D, target_rect: Rect2, horizontal_zoom_out: float = 1.0) -> Rect2:
 	var texture_size := texture.get_size()
 	var target_aspect := target_rect.size.x / target_rect.size.y
 	var texture_aspect := texture_size.x / texture_size.y
@@ -1593,7 +2468,7 @@ func draw_texture_cover(texture: Texture2D, target_rect: Rect2, tint: Color = Co
 		var source_height := texture_size.x / target_aspect
 		source_rect.position.y = (texture_size.y - source_height) * 0.5
 		source_rect.size.y = source_height
-	draw_texture_rect_region(texture, target_rect, source_rect, tint)
+	return source_rect
 
 
 func draw_home() -> void:
@@ -2068,7 +2943,7 @@ func draw_panel(rect: Rect2, color: Color = COLOR_PANEL) -> void:
 	draw_rect(rect, COLOR_INK, false, 4)
 
 
-func draw_button(rect: Rect2, label: String, enabled: bool, color: Color, alpha: float = 1.0) -> void:
+func draw_button(rect: Rect2, label: String, enabled: bool, color: Color, alpha: float = 1.0, font_size: int = 25) -> void:
 	var button_color := color if enabled else Color("#8fa3ad")
 	button_color.a *= clampf(alpha, 0.0, 1.0)
 	var shadow_color := button_color.darkened(0.42)
@@ -2080,7 +2955,7 @@ func draw_button(rect: Rect2, label: String, enabled: bool, color: Color, alpha:
 	draw_rect(Rect2(rect.position + Vector2(0, 7), rect.size), shadow_color)
 	draw_rect(rect, button_color)
 	draw_rect(rect, border_color, false, 3)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y * 0.64), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 25, text_color)
+	draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y * 0.64), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, text_color)
 
 
 func draw_text(value: String, position: Vector2, font_size: int, color: Color) -> void:

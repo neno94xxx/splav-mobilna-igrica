@@ -12,12 +12,31 @@ const PARTS := [
 	{"source": "res://unused_assets/images/intro-scene/fat-scared-head.png", "output": "res://assets/intro-scene/fat-scared-head_optimized_v1.webp", "size": Vector2i(384, 384), "remove_edge_white": true},
 	{"source": "res://unused_assets/images/intro-scene/ship-damaged.png", "output": "res://assets/intro-scene/ship-damaged_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
 	{"source": "res://unused_assets/images/intro-scene/glacier.png", "output": "res://assets/intro-scene/glacier_optimized_v1.webp", "max_size": Vector2i(640, 640), "clean_glacier_artifact": true},
+	{"source": "res://unused_assets/images/intro-scene/captain.png", "output": "res://assets/intro-scene/captain_optimized_v1.webp", "max_size": Vector2i(1280, 1280)},
+	{"source": "res://unused_assets/images/intro-scene/planks.png", "output": "res://assets/intro-scene/planks_optimized_v1.webp", "max_size": Vector2i(512, 512)},
 	{"source": "res://unused_assets/images/intro-scene/rail.png", "output": "res://assets/intro-scene/rail_optimized_v1.webp", "size": Vector2i(1024, 341)},
+	{"source": "res://unused_assets/images/intro-scene/ship.png", "output": "res://assets/intro-scene/ship_optimized_v1.webp", "max_size": Vector2i(1536, 1536)},
+	{"source": "res://unused_assets/images/intro-scene/man1.png", "output": "res://assets/intro-scene/man1_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/woman1.png", "output": "res://assets/intro-scene/woman1_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/woman1-left-arm.png", "output": "res://assets/intro-scene/woman1-left-arm_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/woman1-right-arm.png", "output": "res://assets/intro-scene/woman1-right-arm_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/woman2.png", "output": "res://assets/intro-scene/woman2_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/woman2-left-arm.png", "output": "res://assets/intro-scene/woman2-left-arm_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/woman2-right-arm.png", "output": "res://assets/intro-scene/woman2-right-arm_optimized_v1.webp", "max_size": Vector2i(768, 768)},
+	{"source": "res://unused_assets/images/intro-scene/background-sea-sky.png", "output": "res://assets/intro-scene/background-sea-sky_optimized_v1.webp", "max_size": Vector2i(1280, 1280)},
+	{"source": "res://unused_assets/images/intro-scene/background-sea-sky2.png", "output": "res://assets/intro-scene/background-sea-sky2_optimized_v1.webp", "max_size": Vector2i(1280, 1280)},
+	{"source": "res://unused_assets/images/intro-scene/boys-and-raft.png", "output": "res://assets/intro-scene/boys-and-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
+	{"source": "res://unused_assets/images/intro-scene/fat-boy-raft.png", "output": "res://assets/intro-scene/fat-boy-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
+	{"source": "res://unused_assets/images/intro-scene/skinny-boy-raft.png", "output": "res://assets/intro-scene/skinny-boy-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
+	{"source": "res://unused_assets/images/intro-scene/fat-boy-raft2.png", "output": "res://assets/intro-scene/fat-boy-raft2_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
 ]
 
 
 func _init() -> void:
+	var requested_outputs := OS.get_cmdline_user_args()
 	for part: Dictionary in PARTS:
+		if not requested_outputs.is_empty() and part["output"].get_file() not in requested_outputs:
+			continue
 		var image := Image.load_from_file(ProjectSettings.globalize_path(part["source"]))
 		if image == null or image.is_empty():
 			push_error("Could not load %s" % part["source"])

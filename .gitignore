@@ -65,6 +65,8 @@ desktop.ini
 /concept_art/
 /assets/Untitled.png
 /assets/Untitled.png.import
+/assets/intro-scene/*.png
+/assets/intro-scene/*.png.import
 
 # Retired gameplay experiments and assets no longer referenced by the project
 /assets/impact/
