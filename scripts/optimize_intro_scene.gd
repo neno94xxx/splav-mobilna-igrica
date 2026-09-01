@@ -27,8 +27,12 @@ const PARTS := [
 	{"source": "res://unused_assets/images/intro-scene/background-sea-sky2.png", "output": "res://assets/intro-scene/background-sea-sky2_optimized_v1.webp", "max_size": Vector2i(1280, 1280)},
 	{"source": "res://unused_assets/images/intro-scene/boys-and-raft.png", "output": "res://assets/intro-scene/boys-and-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
 	{"source": "res://unused_assets/images/intro-scene/fat-boy-raft.png", "output": "res://assets/intro-scene/fat-boy-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
-	{"source": "res://unused_assets/images/intro-scene/skinny-boy-raft.png", "output": "res://assets/intro-scene/skinny-boy-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
-	{"source": "res://unused_assets/images/intro-scene/fat-boy-raft2.png", "output": "res://assets/intro-scene/fat-boy-raft2_optimized_v1.webp", "max_size": Vector2i(1024, 1024)},
+	{"source": "res://unused_assets/images/intro-scene/skinny-boy-raft.png", "output": "res://assets/intro-scene/skinny-boy-raft_optimized_v1.webp", "max_size": Vector2i(1024, 1024), "quality": 0.90},
+	{"source": "res://unused_assets/images/intro-scene/fat-boy-raft2.png", "output": "res://assets/intro-scene/fat-boy-raft2_optimized_v1.webp", "max_size": Vector2i(1024, 1024), "quality": 0.90},
+	{"source": "res://unused_assets/images/intro-scene/island.png", "output": "res://assets/intro-scene/island_optimized_v1.webp", "max_size": Vector2i(1280, 1280), "quality": 0.90},
+	{"source": "res://unused_assets/images/intro-scene/raft-and-boys-birds-view.png", "output": "res://assets/intro-scene/raft-and-boys-birds-view_optimized_v1.webp", "max_size": Vector2i(384, 384), "quality": 0.82},
+	{"source": "res://unused_assets/images/intro-scene/beach.png", "output": "res://assets/intro-scene/beach_optimized_v1.webp", "max_size": Vector2i(1280, 1280), "quality": 0.90},
+	{"source": "res://unused_assets/images/intro-scene/fat-boy-beach.png", "output": "res://assets/intro-scene/fat-boy-beach_optimized_v1.webp", "max_size": Vector2i(768, 768), "quality": 0.90},
 ]
 
 
@@ -61,12 +65,13 @@ func _init() -> void:
 			remove_connected_white_background(image)
 		if part.get("clean_glacier_artifact", false):
 			remove_glacier_artifact(image)
-		var result := image.save_webp(ProjectSettings.globalize_path(part["output"]), true, QUALITY)
+		var output_quality: float = part.get("quality", QUALITY)
+		var result := image.save_webp(ProjectSettings.globalize_path(part["output"]), true, output_quality)
 		if result != OK:
 			push_error("Could not save %s" % part["output"])
 			quit(1)
 			return
-		print("SAVED ", part["output"], " ", target_size, " quality=", QUALITY)
+		print("SAVED ", part["output"], " ", target_size, " quality=", output_quality)
 	quit(0)
 
 

@@ -1,13 +1,17 @@
 extends Node2D
 
-enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING, RAFT_PREVIEW, FAT_RAFT_PREVIEW, SKINNY_RAFT_PREVIEW, FAT_RAFT2_PREVIEW, CAPTAIN_PREVIEW }
+enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING, RAFT_PREVIEW, FAT_RAFT_PREVIEW, SKINNY_RAFT_PREVIEW, FAT_RAFT2_PREVIEW, CAPTAIN_PREVIEW, ISLAND_ARRIVAL_PREVIEW, BEACH_PREVIEW }
 
 const VIEW_SIZE := Vector2(720.0, 1280.0)
 const RAFT_Y := 1035.0
 const SAVE_PATH := "user://save.cfg"
 const SPRITE_ATLAS: Texture2D = preload("res://assets/sprites/raft_escape_atlas_v1.png")
+const GAMEPLAY_RAFT_LVL1: Texture2D = preload("res://assets/sprites/raft-lvl1_optimized_v1.webp")
+const GAMEPLAY_SAIL_LVL1: Texture2D = preload("res://assets/sprites/sail-lvl1_optimized_v1.webp")
+const GAMEPLAY_FAT_BOY: Texture2D = preload("res://assets/sprites/fat-boy-on-raft_optimized_v1.webp")
+const GAMEPLAY_SKINNY_BOY: Texture2D = preload("res://assets/sprites/skinny-boy-on-raft_optimized_v1.webp")
 const ISLAND_SPRITE: Texture2D = preload("res://assets/sprites/deserted_island_v1.png")
-const LAUNCH_PUSH_ATLAS: Texture2D = preload("res://assets/sprites/launch_push_atlas_v1.png")
+const LAUNCH_PUSH_ATLAS: Texture2D = preload("res://assets/sprites/launch_push_atlas_v2.webp")
 const GAMEPLAY_OCEAN_SCENE: PackedScene = preload("res://scenes/gameplay_ocean.tscn")
 const RAFT_WAKE_TEXTURE: Texture2D = preload("res://assets/sea/splash1_optimized_v1.webp")
 const RAFT_TURN_SPLASH_TEXTURE: Texture2D = preload("res://assets/sea/splash7_optimized_v1.webp")
@@ -40,6 +44,10 @@ const OPENING_BOYS_AND_RAFT: Texture2D = preload("res://assets/intro-scene/boys-
 const OPENING_FAT_BOY_RAFT: Texture2D = preload("res://assets/intro-scene/fat-boy-raft_optimized_v1.webp")
 const OPENING_SKINNY_BOY_RAFT: Texture2D = preload("res://assets/intro-scene/skinny-boy-raft_optimized_v1.webp")
 const OPENING_FAT_BOY_RAFT2: Texture2D = preload("res://assets/intro-scene/fat-boy-raft2_optimized_v1.webp")
+const OPENING_ARRIVAL_ISLAND: Texture2D = preload("res://assets/intro-scene/island_optimized_v1.webp")
+const OPENING_ARRIVAL_RAFT: Texture2D = preload("res://assets/intro-scene/raft-and-boys-birds-view_optimized_v1.webp")
+const OPENING_BEACH: Texture2D = preload("res://assets/intro-scene/beach_optimized_v1.webp")
+const OPENING_FAT_BOY_BEACH: Texture2D = preload("res://assets/intro-scene/fat-boy-beach_optimized_v1.webp")
 const WORKSHOP_BACKGROUND_SCENE: PackedScene = preload("res://scenes/workshop_animated_background.tscn")
 const WORKSHOP_BRANCHES_SCENE: PackedScene = preload("res://scenes/workshop_branches.tscn")
 const WORKSHOP_RAFT_SCENE: PackedScene = preload("res://scenes/workshop_raft.tscn")
@@ -82,14 +90,14 @@ const OPENING_DIALOGUE_FIFTH := 13.20 / 1.10
 const OPENING_IMPACT_TIME := OPENING_DIALOGUE_FIFTH + ((15.85 - 13.20) / 1.10) * 0.60
 const OPENING_IMPACT_DURATION := 0.72
 const OPENING_DAMAGED_TRANSITION_DURATION := 0.55
-const OPENING_DAMAGED_TURN_DURATION := 4.0
+const OPENING_DAMAGED_TURN_DURATION := 2.8
 const OPENING_CAPTAIN_TRANSITION_DURATION := 0.55
 const OPENING_CAPTAIN_HOLD_DURATION := 3.0
 const OPENING_BREAKUP_TRANSITION_DURATION := 0.55
 const OPENING_BREAKUP_SMOKE_START := 1.60
 const OPENING_BREAKUP_SWAP_TIME := 2.75
 const OPENING_BREAKUP_DURATION := 4.60
-const OPENING_PLANKS_HOLD_DURATION := 3.0
+const OPENING_PLANKS_HOLD_DURATION := 1.5
 const OPENING_PASSENGERS_TRANSITION_DURATION := 0.65
 const OPENING_PASSENGERS_HOLD_DURATION := 4.5 * 0.65
 const OPENING_RAFT_TRANSITION_DURATION := 0.65
@@ -100,13 +108,99 @@ const OPENING_SKINNY_RAFT_TRANSITION_DURATION := 0.55
 const OPENING_SKINNY_RAFT_HOLD_DURATION := 5.0
 const OPENING_FAT_RAFT2_TRANSITION_DURATION := 0.55
 const OPENING_FAT_RAFT2_HOLD_DURATION := 4.0
+const OPENING_ISLAND_TRANSITION_DURATION := 0.65
+const OPENING_ISLAND_ARRIVAL_DURATION := 7.0
+const OPENING_BEACH_TRANSITION_DURATION := 0.65
+const OPENING_BEACH_HOLD_DURATION := 3.6
 const OPENING_END_FADE_DURATION := 0.65
+const UPGRADE_DIALOGUE_FIRST_DELAY := 5.0
+const UPGRADE_DIALOGUE_PAUSE := 20.0
+const UPGRADE_DIALOGUES := [
+	[
+		{"speaker": "fat", "text": "Is the raft almost finished?"},
+		{"speaker": "nerd", "text": "Yes. It's only missing the part that floats."},
+	],
+	[
+		{"speaker": "fat", "text": "I could really go for a baked potato right now."},
+	],
+	[
+		{"speaker": "fat", "text": "Maybe food will appear on its own if I wait long enough."},
+	],
+	[
+		{"speaker": "nerd", "text": "It's amazing how much faster I work when nobody helps me."},
+	],
+	[
+		{"speaker": "nerd", "text": "A plank, some rope, a nail... and one completely useless assistant."},
+	],
+	[
+		{"speaker": "fat", "text": "I don't like the way that bird is looking at me."},
+	],
+	[
+		{"speaker": "nerd", "text": "If this falls apart, we'll say it was a prototype."},
+	],
+	[
+		{"speaker": "nerd", "text": "Just a few more repairs."},
+		{"speaker": "fat", "text": "How many?"},
+		{"speaker": "nerd", "text": "I don't want to ruin your day."},
+	],
+	[
+		{"speaker": "fat", "text": "Maybe we could tame an animal."},
+		{"speaker": "nerd", "text": "Why?"},
+		{"speaker": "fat", "text": "So we can eat it later."},
+	],
+	[
+		{"speaker": "fat", "text": "Is it possible nobody saw us sink?"},
+		{"speaker": "nerd", "text": "The ship sank. I think they were busy."},
+	],
+	[
+		{"speaker": "fat", "text": "I'm not sure I want to go back to sea."},
+		{"speaker": "nerd", "text": "Then you can stay."},
+		{"speaker": "fat", "text": "...When do we leave?"},
+	],
+	[
+		{"speaker": "nerd", "text": "This will hold."},
+		{"speaker": "fat", "text": "Are you sure?"},
+		{"speaker": "nerd", "text": "Don't ruin the moment."},
+	],
+	[
+		{"speaker": "nerd", "text": "We need more wood."},
+		{"speaker": "fat", "text": "And food."},
+		{"speaker": "nerd", "text": "Wood."},
+		{"speaker": "fat", "text": "Wood and food."},
+	],
+	[
+		{"speaker": "fat", "text": "I'm not a very good swimmer."},
+		{"speaker": "nerd", "text": "I noticed during the shipwreck."},
+	],
+	[
+		{"speaker": "fat", "text": "Maybe someone's looking for us."},
+		{"speaker": "nerd", "text": "Definitely."},
+		{"speaker": "fat", "text": "Really?"},
+		{"speaker": "nerd", "text": "No."},
+	],
+	[
+		{"speaker": "fat", "text": "Is a coconut a fruit or a nut?"},
+		{"speaker": "nerd", "text": "Right now, it's lunch."},
+	],
+	[
+		{"speaker": "fat", "text": "I don't think this will float."},
+		{"speaker": "nerd", "text": "Excellent. You're finally thinking."},
+	],
+	[
+		{"speaker": "fat", "text": "I'm hungry."},
+		{"speaker": "nerd", "text": "You said that two minutes ago."},
+		{"speaker": "fat", "text": "I'm hungrier now."},
+	],
+]
+const OPENING_BEACH_PREVIEW_ONLY := false
+const OPENING_ISLAND_ARRIVAL_PREVIEW_ONLY := false
 const OPENING_CAPTAIN_PREVIEW_ONLY := false
 const OPENING_PASSENGERS_PREVIEW_ONLY := false
 const OPENING_RAFT_PREVIEW_ONLY := false
 const OPENING_FAT_RAFT_PREVIEW_ONLY := false
 const OPENING_SKINNY_RAFT_PREVIEW_ONLY := false
 const OPENING_FAT_RAFT2_PREVIEW_ONLY := false
+const GAMEPLAY_ZERO_PROGRESS_TEST_MODE := true
 const OPENING_PLANK_LAYOUT := [
 	{"position": Vector2(78.0, 338.0), "size": 154.0, "rotation": -0.22},
 	{"position": Vector2(168.0, 365.0), "size": 166.0, "rotation": 0.15},
@@ -197,6 +291,13 @@ var intro_duration := 2.20
 var upgrade_feedback := ""
 var upgrade_feedback_time := 0.0
 var upgrade_info_open := -1
+var upgrade_returns_to_home := false
+var upgrade_dialogue_index := 0
+var upgrade_dialogue_line_index := 0
+var upgrade_dialogue_line_time := 0.0
+var upgrade_dialogue_wait_remaining := UPGRADE_DIALOGUE_FIRST_DELAY
+var upgrade_dialogue_active := false
+var opening_seen := false
 var result_rope_to_launch := 0
 var result_planks_to_launch := 0
 var result_display_rope := 0
@@ -243,7 +344,15 @@ func _ready() -> void:
 	set_process_unhandled_input(true)
 	var user_args := OS.get_cmdline_user_args()
 	touch_joystick_enabled = OS.get_name() == "Android" or "--touch-preview" in user_args
-	if OPENING_CAPTAIN_PREVIEW_ONLY:
+	if GAMEPLAY_ZERO_PROGRESS_TEST_MODE:
+		start_zero_progress_gameplay_test()
+	elif OPENING_BEACH_PREVIEW_ONLY:
+		state = State.BEACH_PREVIEW
+		state_time = 0.0
+	elif OPENING_ISLAND_ARRIVAL_PREVIEW_ONLY:
+		state = State.ISLAND_ARRIVAL_PREVIEW
+		state_time = 0.0
+	elif OPENING_CAPTAIN_PREVIEW_ONLY:
 		state = State.CAPTAIN_PREVIEW
 		state_time = 0.0
 	elif OPENING_PASSENGERS_PREVIEW_ONLY:
@@ -263,7 +372,17 @@ func _ready() -> void:
 		state_time = 0.0
 	if "--smoke-test" in user_args:
 		call_deferred("run_smoke_test")
-	if "--capture-opening-party" in user_args:
+	if "--capture-opening-island-arrival" in user_args:
+		state = State.ISLAND_ARRIVAL_PREVIEW
+		state_time = 5.10
+		capture_filename = "opening_island_arrival.png"
+		capture_requested = true
+	elif "--capture-opening-beach" in user_args:
+		state = State.BEACH_PREVIEW
+		state_time = 0.0
+		capture_filename = "opening_beach.png"
+		capture_requested = true
+	elif "--capture-opening-party" in user_args:
 		state = State.OPENING
 		state_time = OPENING_EXTERIOR_DURATION + OPENING_PAN_DURATION * 0.5
 		capture_filename = "opening_party.png"
@@ -339,6 +458,12 @@ func _ready() -> void:
 		prepare_gameplay_capture()
 		capture_filename = "gameplay.png"
 		capture_requested = true
+	elif "--capture-play-sail" in user_args:
+		sail_level = 1
+		sync_visual_raft_level()
+		prepare_gameplay_capture()
+		capture_filename = "gameplay_sail.png"
+		capture_requested = true
 	elif "--capture-results" in user_args:
 		prepare_results_capture()
 		capture_filename = "results.png"
@@ -352,6 +477,16 @@ func _ready() -> void:
 		total_rope = maxi(total_rope, 25)
 		total_planks = maxi(total_planks, 8)
 		capture_filename = "upgrades.png"
+		capture_requested = true
+	elif "--capture-upgrades-dialogue" in user_args:
+		state = State.UPGRADES
+		total_rope = maxi(total_rope, 25)
+		total_planks = maxi(total_planks, 8)
+		upgrade_dialogue_active = true
+		upgrade_dialogue_index = 0
+		upgrade_dialogue_line_index = 0
+		upgrade_dialogue_line_time = 0.7
+		capture_filename = "upgrades_dialogue.png"
 		capture_requested = true
 	elif "--capture-upgrades-info" in user_args:
 		state = State.UPGRADES
@@ -450,7 +585,7 @@ func _process(delta: float) -> void:
 	match state:
 		State.OPENING:
 			if state_time >= opening_total_duration() and not capture_requested:
-				return_to_launch_screen()
+				finish_opening_to_upgrades()
 		State.CHARGING:
 			var time_ratio := clampf(state_time / LAUNCH_FULL_TIME, 0.0, 1.0)
 			launch_charge = (exp(LAUNCH_EXPONENT * time_ratio) - 1.0) / (exp(LAUNCH_EXPONENT) - 1.0)
@@ -464,6 +599,8 @@ func _process(delta: float) -> void:
 			if return_scene_visible:
 				update_returning(delta)
 			update_results(delta)
+		State.UPGRADES:
+			update_upgrade_dialogues(delta)
 		State.VICTORY:
 			world_scroll += 150.0 * delta
 	update_gameplay_ocean()
@@ -829,6 +966,7 @@ func launch_quality_for_charge(charge: float) -> float:
 func return_to_launch_screen() -> void:
 	state = State.HOME
 	state_time = 0.0
+	upgrade_returns_to_home = false
 	reset_touch_joystick()
 	launch_charge = 0.0
 	launch_feedback = ""
@@ -839,6 +977,25 @@ func return_to_launch_screen() -> void:
 	return_landed = false
 	return_elapsed = 0.0
 	return_impact_time = 0.0
+
+
+func start_zero_progress_gameplay_test() -> void:
+	total_rope = 0
+	total_planks = 0
+	run_rope = 0
+	run_planks = 0
+	sail_level = 0
+	protection_level = 0
+	sync_visual_raft_level()
+	raft_health = maximum_raft_health()
+	launch_hold_ratio = 0.78
+	launch_power = 0.78
+	launch_overcharged = false
+	launch_is_perfect = false
+	launch_cruise_speed = launch_speed_for_hold(launch_hold_ratio)
+	raft_forward_speed = launch_cruise_speed
+	run_target_distance = current_max_distance()
+	begin_run()
 
 
 func begin_run(continue_from_intro: bool = false) -> void:
@@ -995,9 +1152,17 @@ func reset_touch_joystick() -> void:
 	joystick_target_axis = 0.0
 
 
-func open_upgrade_screen() -> void:
+func finish_opening_to_upgrades() -> void:
+	opening_seen = true
+	save_progress()
+	open_upgrade_screen(true)
+
+
+func open_upgrade_screen(return_home_after: bool = false) -> void:
 	state = State.UPGRADES
 	state_time = 0.0
+	upgrade_returns_to_home = return_home_after
+	reset_upgrade_dialogues()
 	pointer_active = false
 	upgrade_info_open = -1
 	upgrade_feedback = ""
@@ -1007,7 +1172,65 @@ func open_upgrade_screen() -> void:
 	workshop_fat_man_rig.call("restart_animation")
 
 
+func reset_upgrade_dialogues() -> void:
+	upgrade_dialogue_index = rng.randi_range(0, UPGRADE_DIALOGUES.size() - 1)
+	upgrade_dialogue_line_index = 0
+	upgrade_dialogue_line_time = 0.0
+	upgrade_dialogue_wait_remaining = UPGRADE_DIALOGUE_FIRST_DELAY
+	upgrade_dialogue_active = false
+
+
+func update_upgrade_dialogues(delta: float) -> void:
+	if not upgrade_dialogue_active:
+		upgrade_dialogue_wait_remaining -= delta
+		if upgrade_dialogue_wait_remaining <= 0.0:
+			upgrade_dialogue_active = true
+			upgrade_dialogue_line_index = 0
+			upgrade_dialogue_line_time = 0.0
+		return
+
+	upgrade_dialogue_line_time += delta
+	var current_line := current_upgrade_dialogue_line()
+	if current_line.is_empty():
+		finish_upgrade_dialogue()
+		return
+	if upgrade_dialogue_line_time < upgrade_dialogue_line_duration(str(current_line["text"])):
+		return
+
+	upgrade_dialogue_line_index += 1
+	upgrade_dialogue_line_time = 0.0
+	var current_dialogue: Array = UPGRADE_DIALOGUES[upgrade_dialogue_index]
+	if upgrade_dialogue_line_index >= current_dialogue.size():
+		finish_upgrade_dialogue()
+
+
+func finish_upgrade_dialogue() -> void:
+	upgrade_dialogue_active = false
+	if UPGRADE_DIALOGUES.size() > 1:
+		var dialogue_offset := rng.randi_range(1, UPGRADE_DIALOGUES.size() - 1)
+		upgrade_dialogue_index = (upgrade_dialogue_index + dialogue_offset) % UPGRADE_DIALOGUES.size()
+	upgrade_dialogue_line_index = 0
+	upgrade_dialogue_line_time = 0.0
+	upgrade_dialogue_wait_remaining = UPGRADE_DIALOGUE_PAUSE
+
+
+func current_upgrade_dialogue_line() -> Dictionary:
+	if not upgrade_dialogue_active or UPGRADE_DIALOGUES.is_empty():
+		return {}
+	var current_dialogue: Array = UPGRADE_DIALOGUES[upgrade_dialogue_index]
+	if upgrade_dialogue_line_index < 0 or upgrade_dialogue_line_index >= current_dialogue.size():
+		return {}
+	return current_dialogue[upgrade_dialogue_line_index]
+
+
+func upgrade_dialogue_line_duration(text: String) -> float:
+	return clampf(2.5 + float(text.length()) * 0.025, 2.8, 4.2)
+
+
 func close_upgrade_screen() -> void:
+	if upgrade_returns_to_home:
+		return_to_launch_screen()
+		return
 	state = State.RESULTS
 	state_time = 0.0
 	pointer_active = false
@@ -1157,9 +1380,9 @@ func steering_axis_for_touch(touch_x: float) -> float:
 
 func handle_press(position: Vector2) -> void:
 	match state:
-		State.OPENING, State.CAPTAIN_PREVIEW:
+		State.OPENING, State.CAPTAIN_PREVIEW, State.ISLAND_ARRIVAL_PREVIEW, State.BEACH_PREVIEW:
 			if opening_skip_button.has_point(position):
-				return_to_launch_screen()
+				finish_opening_to_upgrades()
 		State.HOME:
 			if launch_button.has_point(position):
 				start_charging()
@@ -1197,6 +1420,7 @@ func save_progress() -> void:
 	config.set_value("progress", "raft_level", raft_level)
 	config.set_value("progress", "sail_level", sail_level)
 	config.set_value("progress", "protection_level", protection_level)
+	config.set_value("progress", "opening_seen", opening_seen)
 	config.save(SAVE_PATH)
 
 
@@ -1207,6 +1431,7 @@ func load_progress() -> void:
 	# Existing players keep everything they collected before the resource rename.
 	total_rope = maxi(0, int(config.get_value("progress", "rope", config.get_value("progress", "coins", 0))))
 	total_planks = maxi(0, int(config.get_value("progress", "planks", config.get_value("progress", "parts", 0))))
+	opening_seen = bool(config.get_value("progress", "opening_seen", false))
 	if config.has_section_key("progress", "sail_level"):
 		sail_level = clampi(int(config.get_value("progress", "sail_level", 0)), 0, SAIL_MAX_LEVEL)
 		protection_level = clampi(int(config.get_value("progress", "protection_level", 0)), 0, PROTECTION_MAX_LEVEL)
@@ -1292,6 +1517,28 @@ func run_smoke_test() -> void:
 	assert(result_display_rope == total_rope)
 	assert(result_display_planks == total_planks)
 	assert(results_actions_ready())
+	open_upgrade_screen(true)
+	assert(state == State.UPGRADES)
+	assert(upgrade_returns_to_home)
+	close_upgrade_screen()
+	assert(state == State.HOME)
+	reset_upgrade_dialogues()
+	var first_random_dialogue := upgrade_dialogue_index
+	update_upgrade_dialogues(4.9)
+	assert(not upgrade_dialogue_active)
+	update_upgrade_dialogues(0.2)
+	assert(upgrade_dialogue_active)
+	var tested_dialogue_lines := 0
+	while upgrade_dialogue_active and tested_dialogue_lines < 8:
+		update_upgrade_dialogues(upgrade_dialogue_line_duration(str(current_upgrade_dialogue_line()["text"])))
+		tested_dialogue_lines += 1
+	assert(not upgrade_dialogue_active)
+	assert(tested_dialogue_lines > 0)
+	assert(upgrade_dialogue_index != first_random_dialogue)
+	update_upgrade_dialogues(19.9)
+	assert(not upgrade_dialogue_active)
+	update_upgrade_dialogues(0.2)
+	assert(upgrade_dialogue_active)
 	print("SMOKE_TEST_OK")
 	get_tree().quit()
 
@@ -1358,6 +1605,12 @@ func prepare_results_animation_capture() -> void:
 
 func _draw() -> void:
 	match state:
+		State.BEACH_PREVIEW:
+			draw_opening_beach_preview()
+			draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94, 33)
+		State.ISLAND_ARRIVAL_PREVIEW:
+			draw_opening_island_arrival(state_time)
+			draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94, 33)
 		State.CAPTAIN_PREVIEW:
 			draw_opening_captain_scene(1.0)
 			draw_button(opening_skip_button, "SKIP", true, Color("#d16b48"), 0.94, 33)
@@ -1384,6 +1637,151 @@ func _draw() -> void:
 		State.VICTORY:
 			draw_victory()
 	draw_particles()
+
+
+func draw_opening_island_arrival(scene_time: float) -> void:
+	draw_texture_cover(OPENING_ARRIVAL_ISLAND, Rect2(Vector2.ZERO, VIEW_SIZE))
+
+	var travel_duration := 5.0
+	var impact_duration := 0.55
+	var start_position := Vector2(610.0, -105.0)
+	var shore_position := Vector2(360.0, 558.0)
+	var raft_position := shore_position
+	var raft_rotation := deg_to_rad(-4.0)
+	var raft_scale := Vector2.ONE
+
+	if scene_time < travel_duration:
+		var travel_progress := clampf(scene_time / travel_duration, 0.0, 1.0)
+		raft_position = start_position.lerp(shore_position, travel_progress)
+		raft_position.x += sin(travel_progress * PI) * 35.0
+		raft_rotation += sin(travel_progress * TAU) * deg_to_rad(6.0)
+		var wake_pulse := 1.0 + sin(scene_time * 4.2) * 0.05
+		var wake_size := Vector2(74.0, 160.0) * wake_pulse
+		var travel_direction := (shore_position - start_position).normalized()
+		var wake_center := raft_position - travel_direction * 92.0
+		var wake_rotation := travel_direction.angle() - PI * 0.5
+		draw_set_transform(wake_center, wake_rotation, Vector2.ONE)
+		draw_texture_rect(
+			RAFT_WAKE_TEXTURE,
+			Rect2(-wake_size * 0.5, wake_size),
+			false,
+			Color(1.0, 1.0, 1.0, 0.48)
+		)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		var impact_time := scene_time - travel_duration
+		if impact_time < 0.12:
+			var hit_progress := impact_time / 0.12
+			raft_position.y += lerpf(0.0, 18.0, hit_progress)
+			raft_scale = Vector2(1.04, 0.94)
+			raft_rotation += deg_to_rad(2.5) * hit_progress
+		elif impact_time < 0.30:
+			var recoil_progress := smoothstep(0.0, 1.0, (impact_time - 0.12) / 0.18)
+			raft_position.y += lerpf(18.0, -7.0, recoil_progress)
+			raft_scale = Vector2(0.98, 1.03)
+			raft_rotation += deg_to_rad(2.5) * (1.0 - recoil_progress)
+		elif impact_time < impact_duration:
+			var settle_progress := smoothstep(0.0, 1.0, (impact_time - 0.30) / (impact_duration - 0.30))
+			raft_position.y += lerpf(-7.0, 0.0, settle_progress)
+
+		if impact_time < 0.72:
+			var splash_progress := clampf(impact_time / 0.72, 0.0, 1.0)
+			var splash_alpha := sin(splash_progress * PI) * 0.72
+			var contact_point := shore_position + Vector2(0.0, 70.0)
+			draw_arc(
+				contact_point,
+				lerpf(24.0, 86.0, splash_progress),
+				PI + 0.20,
+				TAU - 0.20,
+				28,
+				Color(0.88, 1.0, 1.0, splash_alpha),
+				4.0,
+				true
+			)
+
+	var raft_size := Vector2(152.0, 152.0)
+	draw_set_transform(raft_position, raft_rotation, raft_scale)
+	draw_texture_rect(OPENING_ARRIVAL_RAFT, Rect2(-raft_size * 0.5, raft_size), false)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	var caption_rect := Rect2(24.0, 72.0, 672.0, 86.0)
+	draw_rect(
+		Rect2(caption_rect.position + Vector2(0.0, 6.0), caption_rect.size),
+		Color(0.01, 0.05, 0.08, 0.30)
+	)
+	draw_rect(caption_rect, Color(0.02, 0.12, 0.18, 0.76))
+	var trim_color := Color(0.94, 0.79, 0.54, 0.82)
+	draw_line(caption_rect.position + Vector2(14.0, 5.0), Vector2(caption_rect.end.x - 14.0, caption_rect.position.y + 5.0), trim_color, 2.0)
+	draw_line(Vector2(caption_rect.position.x + 14.0, caption_rect.end.y - 5.0), caption_rect.end - Vector2(14.0, 5.0), trim_color, 2.0)
+	var caption_position := Vector2(caption_rect.position.x + 16.0, caption_rect.position.y + 56.0)
+	var caption_width := caption_rect.size.x - 32.0
+	draw_string(
+		OPENING_CAPTION_FONT,
+		caption_position + Vector2(2.0, 3.0),
+		"Finally, they reach a land.",
+		HORIZONTAL_ALIGNMENT_CENTER,
+		caption_width,
+		32,
+		Color(0.0, 0.0, 0.0, 0.68)
+	)
+	draw_string(
+		OPENING_CAPTION_FONT,
+		caption_position,
+		"Finally, they reach a land.",
+		HORIZONTAL_ALIGNMENT_CENTER,
+		caption_width,
+		32,
+		Color(1.0, 0.95, 0.84)
+	)
+
+
+func draw_opening_beach_preview() -> void:
+	draw_texture_cover(OPENING_BEACH, Rect2(Vector2.ZERO, VIEW_SIZE))
+
+	var boy_rect := Rect2(98.0, 650.0, 540.0, 585.0)
+	draw_texture_rect(OPENING_FAT_BOY_BEACH, boy_rect, false)
+
+	var bubble_rect := Rect2(26.0, 465.0, 668.0, 145.0)
+	var bubble_color := Color(0.92, 0.97, 1.0, 0.97)
+	var ink_color := Color(0.055, 0.11, 0.14)
+	var speaker_point := Vector2(282.0, 710.0)
+	var tail_anchor_x := 282.0
+	var tail_points := PackedVector2Array([
+		Vector2(tail_anchor_x - 11.0, bubble_rect.end.y - 3.0),
+		Vector2(tail_anchor_x + 11.0, bubble_rect.end.y - 3.0),
+		speaker_point,
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(tail_anchor_x - 11.0, bubble_rect.end.y - 1.0),
+		speaker_point,
+		Vector2(tail_anchor_x + 11.0, bubble_rect.end.y - 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(22)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.25)
+	bubble_style.shadow_size = 7
+	bubble_style.shadow_offset = Vector2(0.0, 5.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	var dialogue_lines := [
+		"I wanna go home.",
+		"There is no food here.",
+	]
+	for line_index in dialogue_lines.size():
+		draw_string(
+			OPENING_CAPTION_FONT,
+			Vector2(bubble_rect.position.x + 20.0, bubble_rect.position.y + 54.0 + float(line_index) * 43.0),
+			dialogue_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - 40.0,
+			32,
+			ink_color
+		)
 
 
 func draw_opening_fat_raft2_preview() -> void:
@@ -1626,7 +2024,11 @@ func draw_opening() -> void:
 		var skinny_raft_start := skinny_raft_transition_start + OPENING_SKINNY_RAFT_TRANSITION_DURATION
 		var fat_raft2_transition_start := skinny_raft_start + OPENING_SKINNY_RAFT_HOLD_DURATION
 		var fat_raft2_start := fat_raft2_transition_start + OPENING_FAT_RAFT2_TRANSITION_DURATION
-		var end_fade_start := fat_raft2_start + OPENING_FAT_RAFT2_HOLD_DURATION
+		var island_transition_start := fat_raft2_start + OPENING_FAT_RAFT2_HOLD_DURATION
+		var island_start := island_transition_start + OPENING_ISLAND_TRANSITION_DURATION
+		var beach_transition_start := island_start + OPENING_ISLAND_ARRIVAL_DURATION
+		var beach_start := beach_transition_start + OPENING_BEACH_TRANSITION_DURATION
+		var end_fade_start := beach_start + OPENING_BEACH_HOLD_DURATION
 		if deck_time < damaged_start:
 			draw_opening_ship_scene(1.0)
 		elif deck_time < damaged_start + OPENING_DAMAGED_TRANSITION_DURATION:
@@ -1724,8 +2126,26 @@ func draw_opening() -> void:
 			else:
 				draw_opening_fat_raft2_preview()
 			draw_opening_black_transition(transition_time, OPENING_FAT_RAFT2_TRANSITION_DURATION)
-		else:
+		elif deck_time < island_transition_start:
 			draw_opening_fat_raft2_preview()
+		elif deck_time < island_start:
+			var transition_time := deck_time - island_transition_start
+			if transition_time < OPENING_ISLAND_TRANSITION_DURATION * 0.5:
+				draw_opening_fat_raft2_preview()
+			else:
+				draw_opening_island_arrival(0.0)
+			draw_opening_black_transition(transition_time, OPENING_ISLAND_TRANSITION_DURATION)
+		elif deck_time < beach_transition_start:
+			draw_opening_island_arrival(deck_time - island_start)
+		elif deck_time < beach_start:
+			var transition_time := deck_time - beach_transition_start
+			if transition_time < OPENING_BEACH_TRANSITION_DURATION * 0.5:
+				draw_opening_island_arrival(OPENING_ISLAND_ARRIVAL_DURATION)
+			else:
+				draw_opening_beach_preview()
+			draw_opening_black_transition(transition_time, OPENING_BEACH_TRANSITION_DURATION)
+		else:
+			draw_opening_beach_preview()
 			if deck_time >= end_fade_start:
 				var fade_progress := smoothstep(
 					0.0,
@@ -2319,6 +2739,8 @@ func opening_total_duration() -> float:
 		OPENING_FAT_RAFT_TRANSITION_DURATION + OPENING_FAT_RAFT_HOLD_DURATION +
 		OPENING_SKINNY_RAFT_TRANSITION_DURATION + OPENING_SKINNY_RAFT_HOLD_DURATION +
 		OPENING_FAT_RAFT2_TRANSITION_DURATION + OPENING_FAT_RAFT2_HOLD_DURATION +
+		OPENING_ISLAND_TRANSITION_DURATION + OPENING_ISLAND_ARRIVAL_DURATION +
+		OPENING_BEACH_TRANSITION_DURATION + OPENING_BEACH_HOLD_DURATION +
 		OPENING_END_FADE_DURATION
 	)
 
@@ -2475,7 +2897,7 @@ func draw_home() -> void:
 	draw_ocean_background(0.0)
 	draw_departing_island(0.0)
 	var brace_offset := sin(state_time * 8.0) * 1.5 if state == State.CHARGING else 0.0
-	draw_push_sprite(Vector2i(0, 0), Vector2(VIEW_SIZE.x * 0.5, 1190.0 + brace_offset), Vector2(170.0, 170.0))
+	draw_push_sprite(Vector2i(0, 0), Vector2(VIEW_SIZE.x * 0.5, 1190.0 + brace_offset), Vector2(153.0, 153.0))
 	draw_top_raft(Vector2(VIEW_SIZE.x * 0.5, RAFT_Y), raft_level, raft_level, 1)
 
 	draw_text_center("RAFT ESCAPE", 108, 56, Color.WHITE)
@@ -2539,7 +2961,7 @@ func draw_intro() -> void:
 			stride_cell = Vector2i(1, 0) if sin(t * stride_rate) >= 0.0 else Vector2i(0, 1)
 		draw_raft_wake(Vector2(raft_x, RAFT_Y), wake_strength)
 		draw_launch_splash(Vector2(raft_x, 1215.0), 0.58 + push_ratio * 0.28 + sin(t * stride_rate) * 0.06)
-		draw_push_sprite(stride_cell, Vector2(raft_x, 1190.0), Vector2(170.0, 170.0))
+		draw_push_sprite(stride_cell, Vector2(raft_x, 1190.0), Vector2(153.0, 153.0))
 		draw_top_raft(Vector2(raft_x, RAFT_Y), raft_level, raft_health, 1)
 	elif launch_overcharged:
 		draw_raft_wake(Vector2(raft_x, RAFT_Y), wake_strength)
@@ -2849,6 +3271,85 @@ func draw_upgrades() -> void:
 		var feedback_color := COLOR_ROPE if upgrade_feedback.contains("UPGRADED") else Color("#ff9a91")
 		draw_string(ThemeDB.fallback_font, Vector2(330, 1035), upgrade_feedback, HORIZONTAL_ALIGNMENT_CENTER, 370, 18, feedback_color)
 	draw_button(upgrade_back_button, "BACK", true, COLOR_WATER)
+	draw_upgrade_dialogue()
+
+
+func draw_upgrade_dialogue() -> void:
+	var dialogue_line := current_upgrade_dialogue_line()
+	if dialogue_line.is_empty():
+		return
+
+	var speaker := str(dialogue_line["speaker"])
+	var dialogue_text := str(dialogue_line["text"])
+	var font_size := 24
+	var bubble_width := 296.0
+	var text_lines := wrap_upgrade_dialogue_text(dialogue_text, bubble_width - 34.0, font_size)
+	var bubble_height := 30.0 + float(text_lines.size()) * 28.0
+	var bubble_position := Vector2(10.0, 382.0) if speaker == "fat" else Vector2(10.0, 695.0)
+	var bubble_rect := Rect2(bubble_position, Vector2(bubble_width, bubble_height))
+	var speaker_point := Vector2(164.0, 326.0) if speaker == "fat" else Vector2(298.0, 625.0)
+	var tail_anchor_x := 164.0 if speaker == "fat" else 282.0
+	var line_duration := upgrade_dialogue_line_duration(dialogue_text)
+	var entrance_alpha := smoothstep(0.0, 1.0, clampf(upgrade_dialogue_line_time / 0.22, 0.0, 1.0))
+	var exit_alpha := smoothstep(0.0, 1.0, clampf((line_duration - upgrade_dialogue_line_time) / 0.28, 0.0, 1.0))
+	var dialogue_alpha := minf(entrance_alpha, exit_alpha)
+	var base_bubble_color := Color(0.92, 0.97, 1.0) if speaker == "fat" else Color(1.0, 0.975, 0.90)
+	var bubble_color := Color(base_bubble_color, 0.97 * dialogue_alpha)
+	var ink_color := Color(0.055, 0.11, 0.14, dialogue_alpha)
+	var tail_points := PackedVector2Array([
+		Vector2(tail_anchor_x - 10.0, bubble_rect.position.y + 3.0),
+		Vector2(tail_anchor_x + 10.0, bubble_rect.position.y + 3.0),
+		speaker_point,
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(tail_anchor_x - 10.0, bubble_rect.position.y + 1.0),
+		speaker_point,
+		Vector2(tail_anchor_x + 10.0, bubble_rect.position.y + 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(18)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.23 * dialogue_alpha)
+	bubble_style.shadow_size = 6
+	bubble_style.shadow_offset = Vector2(0.0, 4.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	for line_index in text_lines.size():
+		draw_string(
+			OPENING_CAPTION_FONT,
+			Vector2(bubble_rect.position.x + 17.0, bubble_rect.position.y + 27.0 + float(line_index) * 28.0),
+			text_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - 34.0,
+			font_size,
+			ink_color
+		)
+
+
+func wrap_upgrade_dialogue_text(text: String, max_width: float, font_size: int) -> Array[String]:
+	var wrapped_lines: Array[String] = []
+	var current_line := ""
+	for word_value in text.split(" ", false):
+		var word := str(word_value)
+		var candidate := word if current_line.is_empty() else current_line + " " + word
+		var candidate_width := OPENING_CAPTION_FONT.get_string_size(
+			candidate,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1.0,
+			font_size
+		).x
+		if candidate_width <= max_width or current_line.is_empty():
+			current_line = candidate
+		else:
+			wrapped_lines.append(current_line)
+			current_line = word
+	if not current_line.is_empty():
+		wrapped_lines.append(current_line)
+	return wrapped_lines
 
 
 func draw_upgrade_card(rect: Rect2, icon_index: int, title: String, level: int, max_level: int) -> void:
@@ -3019,10 +3520,11 @@ func draw_person(position: Vector2, skin: Color, shirt: Color, pose: String, fli
 
 
 func draw_top_person(position: Vector2, _skin: Color, _shirt: Color, run_phase: float, airborne: bool = false) -> void:
-	var cell := Vector2i(0, 0)
 	if airborne:
-		cell = Vector2i(3, 0)
-	elif run_phase > 0.01:
+		draw_push_sprite(Vector2i(1, 1), position, Vector2(170.0, 170.0))
+		return
+	var cell := Vector2i(0, 0)
+	if run_phase > 0.01:
 		cell = Vector2i(1, 0) if sin(run_phase * TAU) >= 0.0 else Vector2i(2, 0)
 	draw_atlas_sprite(cell, position, Vector2(116.0, 116.0))
 
@@ -3045,15 +3547,55 @@ func draw_side_raft(position: Vector2, bob: float, level: int) -> void:
 
 
 func draw_top_raft(position: Vector2, level: int, health: int, occupants: int = 2) -> void:
-	var cell := Vector2i(0, 1)
-	if health < level:
-		cell = Vector2i(3, 1)
-	elif occupants >= 2:
-		cell = Vector2i(2, 1)
-	elif occupants == 1:
-		cell = Vector2i(1, 1)
-	var sprite_size := 188.0 + float(level - 1) * 10.0
-	draw_atlas_sprite(cell, position, Vector2(sprite_size, sprite_size))
+	var sprite_size := 214.0
+	var raft_rotation := -raft_steer_visual * 0.075 if state in [State.PLAYING, State.RETURNING] else 0.0
+	var is_damaged := health < maximum_raft_health()
+	var raft_tint := Color(0.82, 0.76, 0.72) if is_damaged else Color.WHITE
+	draw_set_transform(position, raft_rotation, Vector2.ONE)
+	draw_texture_rect(
+		GAMEPLAY_RAFT_LVL1,
+		Rect2(Vector2.ONE * -sprite_size * 0.5, Vector2.ONE * sprite_size),
+		false,
+		raft_tint
+	)
+
+	if sail_level >= 1:
+		var sail_size := sprite_size * 0.98
+		draw_texture_rect(
+			GAMEPLAY_SAIL_LVL1,
+			Rect2(Vector2(-sail_size * 0.5, -sail_size * 0.5 - 5.0), Vector2.ONE * sail_size),
+			false,
+			raft_tint
+		)
+
+	if is_damaged:
+		draw_polyline(PackedVector2Array([
+			Vector2(-31.0, -15.0),
+			Vector2(-9.0, 1.0),
+			Vector2(-23.0, 20.0),
+			Vector2(4.0, 39.0),
+		]), Color(0.20, 0.10, 0.06, 0.78), 3.0, true)
+
+	if occupants >= 1:
+		var skinny_position := Vector2(31.0, 4.0)
+		var skinny_size := 92.4
+		draw_texture_rect(
+			GAMEPLAY_SKINNY_BOY,
+			Rect2(skinny_position - Vector2.ONE * skinny_size * 0.5, Vector2.ONE * skinny_size),
+			false,
+			raft_tint
+		)
+	if occupants >= 2:
+		var fat_position := Vector2(-31.0, 23.0)
+		var fat_size := 99.0
+		draw_texture_rect(
+			GAMEPLAY_FAT_BOY,
+			Rect2(fat_position - Vector2.ONE * fat_size * 0.5, Vector2.ONE * fat_size),
+			false,
+			raft_tint
+		)
+
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func draw_pickup(pickup: Dictionary) -> void:
