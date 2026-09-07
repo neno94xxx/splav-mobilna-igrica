@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" fill="none"/>
+  <g transform="translate(256 256) rotate(-28) translate(-256 -256)">
+    <!-- outer sketch contour -->
+    <path d="M256 72
+             C246 72 236 79 236 91
+             L236 296
+             C236 308 231 314 220 318
+             C202 325 188 343 188 365
+             L188 376
+             C188 400 200 423 223 442
+             L244 459
+             C251 465 261 465 268 459
+             L289 442
+             C312 423 324 400 324 376
+             L324 365
+             C324 343 310 325 292 318
+             C281 314 276 308 276 296
+             L276 91
+             C276 79 266 72 256 72 Z" stroke="#111111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- sketch duplicate lines for hand-drawn look -->
+    <path d="M253 75
+             C244 76 239 82 239 92
+             L239 296
+             C239 309 232 317 221 321
+             C203 328 191 345 191 365
+             L191 376
+             C191 398 203 420 225 438
+             L245 454
+             C251 459 259 459 265 454
+             L286 438
+             C308 420 321 398 321 376
+             L321 365
+             C321 345 309 328 291 321
+             C280 317 273 309 273 296
+             L273 92
+             C273 82 268 76 259 75" stroke="#111111" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+
+    <!-- blade center lines -->
+    <path d="M256 318 L256 450" stroke="#111111" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+    <path d="M226 334 C240 346 242 371 228 388" stroke="#111111" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+    <path d="M287 333 C272 347 271 371 286 389" stroke="#111111" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+
+    <!-- shaft contour emphasis -->
+    <path d="M244 92 L244 313" stroke="#111111" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
+    <path d="M268 92 L268 313" stroke="#111111" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
+    <path d="M256 95 L256 315" stroke="#111111" stroke-width="1" stroke-linecap="round" opacity="0.45"/>
+
+    <!-- handle sketch -->
+    <ellipse cx="256" cy="73" rx="23" ry="10" stroke="#111111" stroke-width="2.4"/>
+    <ellipse cx="256" cy="76" rx="19" ry="7" stroke="#111111" stroke-width="1.1" opacity="0.7"/>
+
+    <!-- small sketch hatching -->
+    <path d="M248 120 L264 136" stroke="#111111" stroke-width="0.8" opacity="0.35"/>
+    <path d="M247 150 L265 168" stroke="#111111" stroke-width="0.8" opacity="0.3"/>
+    <path d="M247 182 L264 199" stroke="#111111" stroke-width="0.8" opacity="0.3"/>
+    <path d="M247 215 L264 232" stroke="#111111" stroke-width="0.8" opacity="0.3"/>
+    <path d="M220 356 L293 356" stroke="#111111" stroke-width="0.8" opacity="0.22"/>
+    <path d="M213 381 L300 381" stroke="#111111" stroke-width="0.8" opacity="0.22"/>
+    <path d="M224 407 L289 407" stroke="#111111" stroke-width="0.8" opacity="0.22"/>
+  </g>
+</svg>

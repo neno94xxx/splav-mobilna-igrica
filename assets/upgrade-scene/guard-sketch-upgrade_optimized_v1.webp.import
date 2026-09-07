@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c5lb4rp7so3io"
-path="res://.godot/imported/rope_collectible_v1.png-4cb8e30e5ad8df1caa36497aa5ab6cfd.ctex"
+uid="uid://ccorr0g1sg5g0"
+path="res://.godot/imported/guard-sketch-upgrade_optimized_v1.webp-2d4b55dead2b94addea045bf493d17c1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/rope_collectible_v1.png"
-dest_files=["res://.godot/imported/rope_collectible_v1.png-4cb8e30e5ad8df1caa36497aa5ab6cfd.ctex"]
+source_file="res://assets/upgrade-scene/guard-sketch-upgrade_optimized_v1.webp"
+dest_files=["res://.godot/imported/guard-sketch-upgrade_optimized_v1.webp-2d4b55dead2b94addea045bf493d17c1.ctex"]
 
 [params]
 

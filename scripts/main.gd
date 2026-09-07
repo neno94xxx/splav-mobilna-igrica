@@ -17,6 +17,8 @@ const RAFT_WAKE_TEXTURE: Texture2D = preload("res://assets/sea/splash1_optimized
 const RAFT_TURN_SPLASH_TEXTURE: Texture2D = preload("res://assets/sea/splash7_optimized_v1.webp")
 const OPENING_EXTERIOR_SHIP: Texture2D = preload("res://assets/sea/ship-on-a-sea_optimized_v1.webp")
 const OPENING_CAPTION_FONT: Font = preload("res://assets/fonts/BreeSerif-Regular.ttf")
+const UPGRADE_UI_FONT: Font = preload("res://assets/fonts/OldStandard-Regular.ttf")
+const UPGRADE_UI_BOLD_FONT: Font = preload("res://assets/fonts/OldStandard-Bold.ttf")
 const OPENING_PARTY_TEXTURE: Texture2D = preload("res://assets/intro-scene/boat-party_optimized_v1.webp")
 const OPENING_SHIP_BACKGROUND: Texture2D = preload("res://assets/intro-scene/ship-background_optimized_v1.webp")
 const OPENING_FAT_BODY: Texture2D = preload("res://assets/intro-scene/fatguy-body_optimized_v1.webp")
@@ -57,13 +59,20 @@ const NERD_PARTS_SCALE := 1.03275
 const NERD_PARTS_BASE_POSITION := Vector2(292.0, 690.0)
 const FAT_MAN_PARTS_BASE_POSITION := Vector2(182.0, 410.0)
 const WORKSHOP_RAFT_BASE_POSITION := Vector2(358.0, 960.0)
-const SAIL_UPGRADE_ICON: Texture2D = preload("res://assets/sprites/sail_upgrade_triangle_v1.png")
-const SHIELD_UPGRADE_ICON: Texture2D = preload("res://assets/sprites/shield_upgrade_v1.png")
-const ROPE_SPRITE: Texture2D = preload("res://assets/sprites/rope_collectible_v1.png")
+const SAIL_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/sail-sketch-upgrade_optimized_v1.webp")
+const SHIELD_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/guard-sketch-upgrade_optimized_v1.webp")
+const OAR_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/oar-sketch-upgrade.svg")
+const UPGRADE_ROPE_ICON: Texture2D = preload("res://assets/sprites/rope_coil_optimized_v2.webp")
+const UPGRADE_PLANK_ICON: Texture2D = preload("res://assets/sprites/plank_collectible_optimized_v2.webp")
+const ROPE_SPRITE: Texture2D = preload("res://assets/sprites/rope_coil_optimized_v2.webp")
+const PLANK_SPRITE: Texture2D = preload("res://assets/sprites/plank_collectible_optimized_v2.webp")
 const BASE_RAFT_RANGE := 75.0
 const SAIL_RANGE_BONUS := 28.0
 const SAIL_MAX_LEVEL := 5
 const PROTECTION_MAX_LEVEL := 4
+const OAR_MAX_LEVEL := 4
+const BASE_STEERING_SPEED := 540.0
+const OAR_STEERING_BONUS := 45.0
 const LAUNCH_FULL_TIME := 2.60
 const LAUNCH_EXPONENT := 3.0
 const LAUNCH_YELLOW_POINT := 0.45
@@ -115,6 +124,31 @@ const OPENING_BEACH_HOLD_DURATION := 3.6
 const OPENING_END_FADE_DURATION := 0.65
 const UPGRADE_DIALOGUE_FIRST_DELAY := 5.0
 const UPGRADE_DIALOGUE_PAUSE := 20.0
+const LAUNCH_DIALOGUE_FIRST_DELAY := 0.8
+const LAUNCH_DIALOGUE_PAUSE := 8.0
+const LAUNCH_DIALOGUES := [
+	[
+		{"speaker": "fat", "text": "Do I really have to push this thing again?"},
+		{"speaker": "nerd", "text": "Come on. One more push. This time we'll make it."},
+	],
+	[
+		{"speaker": "fat", "text": "This raft gets heavier every time."},
+		{"speaker": "nerd", "text": "It doesn't. Just push it already."},
+	],
+	[
+		{"speaker": "fat", "text": "My back still hurts from the last launch."},
+		{"speaker": "nerd", "text": "Then push with your legs."},
+		{"speaker": "fat", "text": "My legs hurt too."},
+	],
+	[
+		{"speaker": "fat", "text": "What if the current sends us back again?"},
+		{"speaker": "nerd", "text": "Then we'll fix it again. Now push!"},
+	],
+	[
+		{"speaker": "fat", "text": "Couldn't you push while I sit on the raft?"},
+		{"speaker": "nerd", "text": "That is exactly what we're doing."},
+	],
+]
 const UPGRADE_DIALOGUES := [
 	[
 		{"speaker": "fat", "text": "Is the raft almost finished?"},
@@ -200,7 +234,8 @@ const OPENING_RAFT_PREVIEW_ONLY := false
 const OPENING_FAT_RAFT_PREVIEW_ONLY := false
 const OPENING_SKINNY_RAFT_PREVIEW_ONLY := false
 const OPENING_FAT_RAFT2_PREVIEW_ONLY := false
-const GAMEPLAY_ZERO_PROGRESS_TEST_MODE := true
+const UPGRADE_SCREEN_TEST_MODE := true
+const GAMEPLAY_ZERO_PROGRESS_TEST_MODE := false
 const OPENING_PLANK_LAYOUT := [
 	{"position": Vector2(78.0, 338.0), "size": 154.0, "rotation": -0.22},
 	{"position": Vector2(168.0, 365.0), "size": 166.0, "rotation": 0.15},
@@ -240,6 +275,10 @@ const COLOR_PANEL := Color("#f7f1df")
 const COLOR_ROPE := Color("#ead8b4")
 const COLOR_WOOD := Color("#a96942")
 const COLOR_CORAL := Color("#ef6f6c")
+const COLOR_UPGRADE_INK := Color("#0a141b")
+const COLOR_UPGRADE_MUTED_INK := Color("#26333c")
+const COLOR_UPGRADE_ACCENT_INK := Color("#633126")
+const COLOR_UPGRADE_STATUS_INK := Color("#075066")
 
 var state: int = State.OPENING
 var state_time := 0.0
@@ -253,6 +292,7 @@ var total_planks := 0
 var raft_level := 1
 var sail_level := 0
 var protection_level := 0
+var oar_level := 0
 var raft_health := 1
 var return_reason := ""
 var return_scene_visible := false
@@ -297,6 +337,11 @@ var upgrade_dialogue_line_index := 0
 var upgrade_dialogue_line_time := 0.0
 var upgrade_dialogue_wait_remaining := UPGRADE_DIALOGUE_FIRST_DELAY
 var upgrade_dialogue_active := false
+var launch_dialogue_index := 0
+var launch_dialogue_line_index := 0
+var launch_dialogue_line_time := 0.0
+var launch_dialogue_wait_remaining := LAUNCH_DIALOGUE_FIRST_DELAY
+var launch_dialogue_active := false
 var opening_seen := false
 var result_rope_to_launch := 0
 var result_planks_to_launch := 0
@@ -327,10 +372,12 @@ var launch_button := Rect2(110, 555, 500, 102)
 var opening_skip_button := Rect2(535, 1180, 155, 58)
 var again_button := Rect2(100, 895, 520, 88)
 var upgrade_button := Rect2(100, 1010, 520, 88)
-var sail_upgrade_button := Rect2(450, 271, 234, 34)
-var protection_upgrade_button := Rect2(450, 417, 234, 34)
-var sail_info_button := Rect2(648, 187, 38, 38)
-var protection_info_button := Rect2(648, 333, 38, 38)
+var sail_upgrade_button := Rect2(563, 219, 129, 34)
+var protection_upgrade_button := Rect2(563, 320, 129, 34)
+var oar_upgrade_button := Rect2(563, 421, 129, 34)
+var sail_info_button := Rect2(654, 180, 38, 38)
+var protection_info_button := Rect2(654, 281, 38, 38)
+var oar_info_button := Rect2(654, 382, 38, 38)
 var upgrade_back_button := Rect2(370, 930, 300, 66)
 var victory_button := Rect2(120, 1100, 480, 88)
 
@@ -344,7 +391,10 @@ func _ready() -> void:
 	set_process_unhandled_input(true)
 	var user_args := OS.get_cmdline_user_args()
 	touch_joystick_enabled = OS.get_name() == "Android" or "--touch-preview" in user_args
-	if GAMEPLAY_ZERO_PROGRESS_TEST_MODE:
+	if UPGRADE_SCREEN_TEST_MODE:
+		state = State.UPGRADES
+		state_time = 0.0
+	elif GAMEPLAY_ZERO_PROGRESS_TEST_MODE:
 		start_zero_progress_gameplay_test()
 	elif OPENING_BEACH_PREVIEW_ONLY:
 		state = State.BEACH_PREVIEW
@@ -453,6 +503,14 @@ func _ready() -> void:
 		capture_filename = "opening_fat_raft2.png"
 		capture_requested = true
 	elif "--capture" in user_args:
+		capture_requested = true
+	elif "--capture-launch-dialogue" in user_args:
+		return_to_launch_screen()
+		launch_dialogue_active = true
+		launch_dialogue_index = 0
+		launch_dialogue_line_index = 1 if "--capture-launch-dialogue-reply" in user_args else 0
+		launch_dialogue_line_time = 0.7
+		capture_filename = "launch_dialogue.png"
 		capture_requested = true
 	elif "--capture-play" in user_args:
 		prepare_gameplay_capture()
@@ -583,6 +641,8 @@ func _process(delta: float) -> void:
 	update_particles(delta)
 
 	match state:
+		State.HOME:
+			update_launch_dialogues(delta)
 		State.OPENING:
 			if state_time >= opening_total_duration() and not capture_requested:
 				finish_opening_to_upgrades()
@@ -725,7 +785,7 @@ func update_playing(delta: float) -> void:
 		steer_goal = clampf((target_x - raft_x) / 105.0, -1.0, 1.0)
 	raft_steer_visual = move_toward(raft_steer_visual, steer_goal, delta * 6.5)
 
-	raft_x = move_toward(raft_x, target_x, 540.0 * delta)
+	raft_x = move_toward(raft_x, target_x, current_steering_speed() * delta)
 	raft_x = clampf(raft_x, 88.0, VIEW_SIZE.x - 88.0)
 	target_x = clampf(target_x, 88.0, VIEW_SIZE.x - 88.0)
 
@@ -966,6 +1026,7 @@ func launch_quality_for_charge(charge: float) -> float:
 func return_to_launch_screen() -> void:
 	state = State.HOME
 	state_time = 0.0
+	reset_launch_dialogues()
 	upgrade_returns_to_home = false
 	reset_touch_joystick()
 	launch_charge = 0.0
@@ -986,6 +1047,7 @@ func start_zero_progress_gameplay_test() -> void:
 	run_planks = 0
 	sail_level = 0
 	protection_level = 0
+	oar_level = 0
 	sync_visual_raft_level()
 	raft_health = maximum_raft_health()
 	launch_hold_ratio = 0.78
@@ -1227,17 +1289,63 @@ func upgrade_dialogue_line_duration(text: String) -> float:
 	return clampf(2.5 + float(text.length()) * 0.025, 2.8, 4.2)
 
 
-func close_upgrade_screen() -> void:
-	if upgrade_returns_to_home:
-		return_to_launch_screen()
+func reset_launch_dialogues() -> void:
+	launch_dialogue_index = rng.randi_range(0, LAUNCH_DIALOGUES.size() - 1)
+	launch_dialogue_line_index = 0
+	launch_dialogue_line_time = 0.0
+	launch_dialogue_wait_remaining = LAUNCH_DIALOGUE_FIRST_DELAY
+	launch_dialogue_active = false
+
+
+func update_launch_dialogues(delta: float) -> void:
+	if not launch_dialogue_active:
+		launch_dialogue_wait_remaining -= delta
+		if launch_dialogue_wait_remaining <= 0.0:
+			launch_dialogue_active = true
+			launch_dialogue_line_index = 0
+			launch_dialogue_line_time = 0.0
 		return
-	state = State.RESULTS
-	state_time = 0.0
-	pointer_active = false
-	upgrade_info_open = -1
-	result_display_rope = total_rope
-	result_display_planks = total_planks
-	result_sequence_complete = true
+
+	launch_dialogue_line_time += delta
+	var current_line := current_launch_dialogue_line()
+	if current_line.is_empty():
+		finish_launch_dialogue()
+		return
+	if launch_dialogue_line_time < launch_dialogue_line_duration(str(current_line["text"])):
+		return
+
+	launch_dialogue_line_index += 1
+	launch_dialogue_line_time = 0.0
+	var current_dialogue: Array = LAUNCH_DIALOGUES[launch_dialogue_index]
+	if launch_dialogue_line_index >= current_dialogue.size():
+		finish_launch_dialogue()
+
+
+func finish_launch_dialogue() -> void:
+	launch_dialogue_active = false
+	if LAUNCH_DIALOGUES.size() > 1:
+		var dialogue_offset := rng.randi_range(1, LAUNCH_DIALOGUES.size() - 1)
+		launch_dialogue_index = (launch_dialogue_index + dialogue_offset) % LAUNCH_DIALOGUES.size()
+	launch_dialogue_line_index = 0
+	launch_dialogue_line_time = 0.0
+	launch_dialogue_wait_remaining = LAUNCH_DIALOGUE_PAUSE
+
+
+func current_launch_dialogue_line() -> Dictionary:
+	if not launch_dialogue_active or LAUNCH_DIALOGUES.is_empty():
+		return {}
+	var current_dialogue: Array = LAUNCH_DIALOGUES[launch_dialogue_index]
+	if launch_dialogue_line_index < 0 or launch_dialogue_line_index >= current_dialogue.size():
+		return {}
+	return current_dialogue[launch_dialogue_line_index]
+
+
+func launch_dialogue_line_duration(text: String) -> float:
+	return clampf(2.3 + float(text.length()) * 0.022, 2.6, 3.6)
+
+
+func close_upgrade_screen() -> void:
+	return_to_launch_screen()
 	result_button_reveal = 1.0
 
 
@@ -1260,7 +1368,7 @@ func try_purchase_sail() -> void:
 
 func try_purchase_protection() -> void:
 	if protection_level >= PROTECTION_MAX_LEVEL:
-		show_upgrade_feedback("PROTECTION IS ALREADY MAXED", false)
+		show_upgrade_feedback("GUARD IS ALREADY MAXED", false)
 		return
 	var cost := protection_upgrade_cost(protection_level)
 	if not can_pay(cost):
@@ -1273,7 +1381,24 @@ func try_purchase_protection() -> void:
 	sync_visual_raft_level()
 	save_progress()
 	burst(protection_upgrade_button.get_center(), COLOR_ROPE, 24)
-	show_upgrade_feedback("PROTECTION UPGRADED  +1 SAFE HIT", true)
+	show_upgrade_feedback("GUARD UPGRADED  +1 SAFE HIT", true)
+
+
+func try_purchase_oar() -> void:
+	if oar_level >= OAR_MAX_LEVEL:
+		show_upgrade_feedback("OAR IS ALREADY MAXED", false)
+		return
+	var cost := oar_upgrade_cost(oar_level)
+	if not can_pay(cost):
+		show_upgrade_feedback("NOT ENOUGH MATERIALS", false)
+		return
+	total_rope -= cost.x
+	total_planks -= cost.y
+	oar_level += 1
+	sync_visual_raft_level()
+	save_progress()
+	burst(oar_upgrade_button.get_center(), COLOR_ROPE, 24)
+	show_upgrade_feedback("OAR UPGRADED  +8% STEERING", true)
 
 
 func show_upgrade_feedback(message: String, success: bool) -> void:
@@ -1293,8 +1418,12 @@ func maximum_raft_health() -> int:
 	return 1 + protection_level
 
 
+func current_steering_speed() -> float:
+	return BASE_STEERING_SPEED + float(oar_level) * OAR_STEERING_BONUS
+
+
 func sync_visual_raft_level() -> void:
-	var strongest_upgrade := maxi(sail_level, protection_level)
+	var strongest_upgrade := maxi(maxi(sail_level, protection_level), oar_level)
 	raft_level = clampi(1 + int(strongest_upgrade / 2), 1, 3)
 
 
@@ -1314,6 +1443,15 @@ func protection_upgrade_cost(level: int) -> Vector2i:
 		1: return Vector2i(16, 5)
 		2: return Vector2i(28, 9)
 		3: return Vector2i(44, 14)
+		_: return Vector2i.ZERO
+
+
+func oar_upgrade_cost(level: int) -> Vector2i:
+	match level:
+		0: return Vector2i(5, 2)
+		1: return Vector2i(10, 4)
+		2: return Vector2i(18, 7)
+		3: return Vector2i(30, 11)
 		_: return Vector2i.ZERO
 
 
@@ -1400,10 +1538,14 @@ func handle_press(position: Vector2) -> void:
 				upgrade_info_open = -1 if upgrade_info_open == 0 else 0
 			elif protection_info_button.has_point(position):
 				upgrade_info_open = -1 if upgrade_info_open == 1 else 1
+			elif oar_info_button.has_point(position):
+				upgrade_info_open = -1 if upgrade_info_open == 2 else 2
 			elif sail_upgrade_button.has_point(position):
 				try_purchase_sail()
 			elif protection_upgrade_button.has_point(position):
 				try_purchase_protection()
+			elif oar_upgrade_button.has_point(position):
+				try_purchase_oar()
 			elif upgrade_back_button.has_point(position):
 				close_upgrade_screen()
 			else:
@@ -1420,6 +1562,7 @@ func save_progress() -> void:
 	config.set_value("progress", "raft_level", raft_level)
 	config.set_value("progress", "sail_level", sail_level)
 	config.set_value("progress", "protection_level", protection_level)
+	config.set_value("progress", "oar_level", oar_level)
 	config.set_value("progress", "opening_seen", opening_seen)
 	config.save(SAVE_PATH)
 
@@ -1435,6 +1578,7 @@ func load_progress() -> void:
 	if config.has_section_key("progress", "sail_level"):
 		sail_level = clampi(int(config.get_value("progress", "sail_level", 0)), 0, SAIL_MAX_LEVEL)
 		protection_level = clampi(int(config.get_value("progress", "protection_level", 0)), 0, PROTECTION_MAX_LEVEL)
+		oar_level = clampi(int(config.get_value("progress", "oar_level", 0)), 0, OAR_MAX_LEVEL)
 	else:
 		var legacy_level := clampi(int(config.get_value("progress", "raft_level", 1)), 1, 3)
 		match legacy_level:
@@ -1453,6 +1597,12 @@ func run_smoke_test() -> void:
 	assert(max_distance_for_sail(SAIL_MAX_LEVEL) == 215.0)
 	assert(sail_upgrade_cost(0) == Vector2i(6, 2))
 	assert(protection_upgrade_cost(0) == Vector2i(8, 3))
+	assert(oar_upgrade_cost(0) == Vector2i(5, 2))
+	oar_level = 0
+	assert(current_steering_speed() == BASE_STEERING_SPEED)
+	oar_level = OAR_MAX_LEVEL
+	assert(current_steering_speed() == BASE_STEERING_SPEED + OAR_STEERING_BONUS * OAR_MAX_LEVEL)
+	oar_level = 0
 	raft_x = VIEW_SIZE.x * 0.5
 	assert(steering_axis_for_touch(raft_x - 165.0) == -1.0)
 	assert(steering_axis_for_touch(raft_x + 165.0) == 1.0)
@@ -2903,7 +3053,7 @@ func draw_home() -> void:
 	draw_text_center("RAFT ESCAPE", 108, 56, Color.WHITE)
 	draw_text_center("Simple playable prototype", 148, 24, Color("#c8f4f7"))
 	draw_panel(Rect2(55, 190, 610, 490))
-	draw_text_center("SAIL %d / %d    PROTECTION %d / %d" % [sail_level, SAIL_MAX_LEVEL, protection_level, PROTECTION_MAX_LEVEL], 255, 25, COLOR_INK)
+	draw_text_center("SAIL %d/%d    GUARD %d/%d    OAR %d/%d" % [sail_level, SAIL_MAX_LEVEL, protection_level, PROTECTION_MAX_LEVEL, oar_level, OAR_MAX_LEVEL], 255, 21, COLOR_INK)
 	draw_text_center("Maximum range: %d m" % int(current_max_distance()), 308, 24, COLOR_INK.lightened(0.12))
 	draw_text_center("ROPE  %d     |     PLANKS  %d" % [total_rope, total_planks], 358, 23, COLOR_INK)
 	if state == State.CHARGING:
@@ -2913,6 +3063,82 @@ func draw_home() -> void:
 	draw_launch_meter()
 	var button_label := "RELEASE TO LAUNCH" if state == State.CHARGING else "HOLD TO LAUNCH"
 	draw_button(launch_button, button_label, true, COLOR_CORAL)
+	if state == State.HOME:
+		draw_launch_dialogue()
+
+
+func draw_launch_dialogue() -> void:
+	var dialogue_line := current_launch_dialogue_line()
+	if dialogue_line.is_empty():
+		return
+
+	var speaker := str(dialogue_line["speaker"])
+	var dialogue_text := str(dialogue_line["text"])
+	var font_size := 25
+	var maximum_bubble_width := 400.0
+	var horizontal_padding := 40.0
+	var text_lines := wrap_upgrade_dialogue_text(dialogue_text, maximum_bubble_width - horizontal_padding, font_size)
+	var widest_line := 0.0
+	for text_line in text_lines:
+		widest_line = maxf(
+			widest_line,
+			UPGRADE_UI_FONT.get_string_size(str(text_line), HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+		)
+	var bubble_width := clampf(ceilf(widest_line + horizontal_padding), 220.0, maximum_bubble_width)
+	var line_step := 30.0
+	var font_height := UPGRADE_UI_FONT.get_height(font_size)
+	var text_block_height := font_height + maxf(0.0, float(text_lines.size() - 1) * line_step)
+	var bubble_height := text_block_height + 26.0
+	var speaker_point := Vector2(334.0, 1138.0) if speaker == "fat" else Vector2(392.0, 1004.0)
+	var bubble_x := 18.0 if speaker == "fat" else VIEW_SIZE.x - 18.0 - bubble_width
+	var bubble_bottom := 1085.0 if speaker == "fat" else 965.0
+	var line_duration := launch_dialogue_line_duration(dialogue_text)
+	var entrance_alpha := smoothstep(0.0, 1.0, clampf(launch_dialogue_line_time / 0.20, 0.0, 1.0))
+	var exit_alpha := smoothstep(0.0, 1.0, clampf((line_duration - launch_dialogue_line_time) / 0.25, 0.0, 1.0))
+	var dialogue_alpha := minf(entrance_alpha, exit_alpha)
+	var bubble_rect := Rect2(
+		bubble_x,
+		bubble_bottom - bubble_height + (1.0 - entrance_alpha) * 6.0,
+		bubble_width,
+		bubble_height
+	)
+	var base_bubble_color := Color(0.92, 0.97, 1.0) if speaker == "fat" else Color(1.0, 0.975, 0.90)
+	var bubble_color := Color(base_bubble_color, 0.97 * dialogue_alpha)
+	var ink_color := Color(0.025, 0.055, 0.070, dialogue_alpha)
+	var tail_anchor_x := clampf(speaker_point.x, bubble_rect.position.x + 25.0, bubble_rect.end.x - 25.0)
+	var tail_points := PackedVector2Array([
+		Vector2(tail_anchor_x - 10.0, bubble_rect.end.y - 3.0),
+		Vector2(tail_anchor_x + 10.0, bubble_rect.end.y - 3.0),
+		speaker_point,
+	])
+	draw_colored_polygon(tail_points, bubble_color)
+	draw_polyline(PackedVector2Array([
+		Vector2(tail_anchor_x - 10.0, bubble_rect.end.y - 1.0),
+		speaker_point,
+		Vector2(tail_anchor_x + 10.0, bubble_rect.end.y - 1.0),
+	]), ink_color, 3.0, true)
+
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(19)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.23 * dialogue_alpha)
+	bubble_style.shadow_size = 6
+	bubble_style.shadow_offset = Vector2(0.0, 4.0)
+	draw_style_box(bubble_style, bubble_rect)
+
+	var first_text_baseline := bubble_rect.position.y + (bubble_rect.size.y - text_block_height) * 0.5 + UPGRADE_UI_FONT.get_ascent(font_size)
+	for line_index in text_lines.size():
+		draw_string(
+			UPGRADE_UI_FONT,
+			Vector2(bubble_rect.position.x + horizontal_padding * 0.5, first_text_baseline + float(line_index) * line_step),
+			text_lines[line_index],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			bubble_rect.size.x - horizontal_padding,
+			font_size,
+			ink_color
+		)
 
 
 func draw_launch_meter() -> void:
@@ -3089,7 +3315,10 @@ func draw_push_sprite(cell: Vector2i, position: Vector2, size: Vector2) -> void:
 
 
 func draw_upgrade_icon(index: int, position: Vector2, size: Vector2) -> void:
-	var texture := SAIL_UPGRADE_ICON if index == 0 else SHIELD_UPGRADE_ICON
+	var texture := SAIL_UPGRADE_ICON
+	match index:
+		1: texture = SHIELD_UPGRADE_ICON
+		2: texture = OAR_UPGRADE_ICON
 	var texture_size := texture.get_size()
 	var fit_scale := minf(size.x / texture_size.x, size.y / texture_size.y)
 	var fitted_size := texture_size * fit_scale
@@ -3256,21 +3485,21 @@ func draw_result_flyers() -> void:
 func draw_upgrades() -> void:
 	draw_rect(Rect2(315, 165, 405, 865), Color(0.02, 0.12, 0.18, 0.42))
 	draw_rect(Rect2(0, 0, VIEW_SIZE.x, 165), Color(0.02, 0.12, 0.18, 0.90))
-	draw_text_center("RAFT WORKSHOP", 62, 42, Color.WHITE)
-	draw_text_center("Choose what to improve", 99, 19, Color("#c8f4f7"))
-	draw_text_center("ROPE  %d     |     PLANKS  %d" % [total_rope, total_planks], 140, 22, COLOR_ROPE)
+	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(0, 62), "RAFT BLUEPRINTS", HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 42, Color.WHITE)
+	draw_string(UPGRADE_UI_FONT, Vector2(0, 99), "Choose what to improve", HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 20, Color("#c8f4f7"))
+	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(0, 140), "ROPE  %d     |     PLANKS  %d" % [total_rope, total_planks], HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 22, COLOR_ROPE)
 
-	draw_upgrade_card(Rect2(330, 175, 370, 136), 0, "SAIL", sail_level, SAIL_MAX_LEVEL)
-	draw_upgrade_card(Rect2(330, 321, 370, 136), 1, "PROTECTION", protection_level, PROTECTION_MAX_LEVEL)
-	draw_upgrade_placeholder(Rect2(330, 467, 370, 136))
-	draw_upgrade_placeholder(Rect2(330, 613, 370, 136))
-	draw_upgrade_placeholder(Rect2(330, 759, 370, 136))
+	draw_upgrade_card(Rect2(293, 175, 407, 96), 0, "SAIL", sail_level, SAIL_MAX_LEVEL)
+	draw_upgrade_card(Rect2(293, 276, 407, 96), 1, "GUARD", protection_level, PROTECTION_MAX_LEVEL)
+	draw_upgrade_card(Rect2(293, 377, 407, 96), 2, "OAR", oar_level, OAR_MAX_LEVEL)
+	draw_upgrade_placeholder(Rect2(293, 478, 407, 96))
+	draw_upgrade_placeholder(Rect2(293, 579, 407, 96))
 	draw_upgrade_info_panel()
 
 	if upgrade_feedback_time > 0.0 and not upgrade_feedback.is_empty():
 		var feedback_color := COLOR_ROPE if upgrade_feedback.contains("UPGRADED") else Color("#ff9a91")
-		draw_string(ThemeDB.fallback_font, Vector2(330, 1035), upgrade_feedback, HORIZONTAL_ALIGNMENT_CENTER, 370, 18, feedback_color)
-	draw_button(upgrade_back_button, "BACK", true, COLOR_WATER)
+		draw_string(UPGRADE_UI_BOLD_FONT, Vector2(330, 1035), upgrade_feedback, HORIZONTAL_ALIGNMENT_CENTER, 370, 18, feedback_color)
+	draw_button(upgrade_back_button, "LAUNCH RAFT", true, COLOR_WATER, 1.0, 25, UPGRADE_UI_BOLD_FONT)
 	draw_upgrade_dialogue()
 
 
@@ -3282,10 +3511,18 @@ func draw_upgrade_dialogue() -> void:
 	var speaker := str(dialogue_line["speaker"])
 	var dialogue_text := str(dialogue_line["text"])
 	var font_size := 24
-	var bubble_width := 296.0
-	var text_lines := wrap_upgrade_dialogue_text(dialogue_text, bubble_width - 34.0, font_size)
-	var bubble_height := 30.0 + float(text_lines.size()) * 28.0
-	var bubble_position := Vector2(10.0, 382.0) if speaker == "fat" else Vector2(10.0, 695.0)
+	var maximum_bubble_width := 296.0
+	var text_lines := wrap_upgrade_dialogue_text(dialogue_text, maximum_bubble_width - 34.0, font_size)
+	var widest_line := 0.0
+	for text_line in text_lines:
+		widest_line = maxf(widest_line, UPGRADE_UI_FONT.get_string_size(str(text_line), HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x)
+	var bubble_width := clampf(ceilf(widest_line + 34.0), 180.0, maximum_bubble_width)
+	var line_step := 28.0
+	var font_height := UPGRADE_UI_FONT.get_height(font_size)
+	var text_block_height := font_height + maxf(0.0, float(text_lines.size() - 1) * line_step)
+	var bubble_height := text_block_height + 24.0
+	var bubble_x := 10.0 if speaker == "fat" else 306.0 - bubble_width
+	var bubble_position := Vector2(bubble_x, 382.0) if speaker == "fat" else Vector2(bubble_x, 695.0)
 	var bubble_rect := Rect2(bubble_position, Vector2(bubble_width, bubble_height))
 	var speaker_point := Vector2(164.0, 326.0) if speaker == "fat" else Vector2(298.0, 625.0)
 	var tail_anchor_x := 164.0 if speaker == "fat" else 282.0
@@ -3295,7 +3532,7 @@ func draw_upgrade_dialogue() -> void:
 	var dialogue_alpha := minf(entrance_alpha, exit_alpha)
 	var base_bubble_color := Color(0.92, 0.97, 1.0) if speaker == "fat" else Color(1.0, 0.975, 0.90)
 	var bubble_color := Color(base_bubble_color, 0.97 * dialogue_alpha)
-	var ink_color := Color(0.055, 0.11, 0.14, dialogue_alpha)
+	var ink_color := Color(0.025, 0.055, 0.070, dialogue_alpha)
 	var tail_points := PackedVector2Array([
 		Vector2(tail_anchor_x - 10.0, bubble_rect.position.y + 3.0),
 		Vector2(tail_anchor_x + 10.0, bubble_rect.position.y + 3.0),
@@ -3318,10 +3555,11 @@ func draw_upgrade_dialogue() -> void:
 	bubble_style.shadow_offset = Vector2(0.0, 4.0)
 	draw_style_box(bubble_style, bubble_rect)
 
+	var first_text_baseline := bubble_rect.position.y + (bubble_rect.size.y - text_block_height) * 0.5 + UPGRADE_UI_FONT.get_ascent(font_size)
 	for line_index in text_lines.size():
 		draw_string(
-			OPENING_CAPTION_FONT,
-			Vector2(bubble_rect.position.x + 17.0, bubble_rect.position.y + 27.0 + float(line_index) * 28.0),
+			UPGRADE_UI_FONT,
+			Vector2(bubble_rect.position.x + 17.0, first_text_baseline + float(line_index) * line_step),
 			text_lines[line_index],
 			HORIZONTAL_ALIGNMENT_CENTER,
 			bubble_rect.size.x - 34.0,
@@ -3336,7 +3574,7 @@ func wrap_upgrade_dialogue_text(text: String, max_width: float, font_size: int) 
 	for word_value in text.split(" ", false):
 		var word := str(word_value)
 		var candidate := word if current_line.is_empty() else current_line + " " + word
-		var candidate_width := OPENING_CAPTION_FONT.get_string_size(
+		var candidate_width := UPGRADE_UI_FONT.get_string_size(
 			candidate,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1.0,
@@ -3354,71 +3592,146 @@ func wrap_upgrade_dialogue_text(text: String, max_width: float, font_size: int) 
 
 func draw_upgrade_card(rect: Rect2, icon_index: int, title: String, level: int, max_level: int) -> void:
 	draw_panel(rect, Color(0.97, 0.94, 0.84, 0.96))
-	draw_upgrade_icon(icon_index, rect.position + Vector2(60.0, 68.0), Vector2(98.0, 98.0))
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(116, 31), title, HORIZONTAL_ALIGNMENT_CENTER, 172, 20, COLOR_INK)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(116, 53), "LEVEL %d / %d" % [level, max_level], HORIZONTAL_ALIGNMENT_CENTER, 172, 14, Color("#45647a"))
-	var info_rect := sail_info_button if icon_index == 0 else protection_info_button
+	draw_upgrade_icon(icon_index, rect.position + Vector2(50.0, 51.0), Vector2(84.0, 84.0))
+	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(92, 28), title, HORIZONTAL_ALIGNMENT_CENTER, 140, 20, COLOR_UPGRADE_INK)
+	draw_string(ThemeDB.fallback_font, rect.position + Vector2(232, 27), "LEVEL %d / %d" % [level, max_level], HORIZONTAL_ALIGNMENT_CENTER, 115, 14, COLOR_UPGRADE_MUTED_INK)
+	var info_rect := sail_info_button
+	var button_rect := sail_upgrade_button
+	var cost := sail_upgrade_cost(level)
+	match icon_index:
+		1:
+			info_rect = protection_info_button
+			button_rect = protection_upgrade_button
+			cost = protection_upgrade_cost(level)
+		2:
+			info_rect = oar_info_button
+			button_rect = oar_upgrade_button
+			cost = oar_upgrade_cost(level)
 	draw_upgrade_info_badge(info_rect, upgrade_info_open == icon_index)
-	var button_rect := sail_upgrade_button if icon_index == 0 else protection_upgrade_button
 	if level >= max_level:
-		draw_string(ThemeDB.fallback_font, rect.position + Vector2(116, 82), "NO MORE MATERIALS NEEDED", HORIZONTAL_ALIGNMENT_CENTER, 228, 12, Color("#45647a"))
+		draw_string(UPGRADE_UI_FONT, rect.position + Vector2(101, 67), "NO MORE MATERIALS NEEDED", HORIZONTAL_ALIGNMENT_CENTER, 165, 12, COLOR_UPGRADE_MUTED_INK)
 		draw_compact_button(button_rect, "MAX LEVEL", false, COLOR_CORAL)
 	else:
-		var cost := sail_upgrade_cost(level) if icon_index == 0 else protection_upgrade_cost(level)
-		draw_upgrade_cost(rect.position + Vector2(128, 77), cost)
+		draw_upgrade_cost(rect.position + Vector2(112, 61), cost)
 		draw_compact_button(button_rect, "UPGRADE", can_pay(cost), COLOR_CORAL)
 
 
 func draw_upgrade_cost(origin: Vector2, cost: Vector2i) -> void:
-	draw_resource_icon("rope", origin, Vector2(31, 31))
-	draw_string(ThemeDB.fallback_font, origin + Vector2(20, 6), "x%d" % cost.x, HORIZONTAL_ALIGNMENT_LEFT, 48, 17, COLOR_INK)
+	draw_upgrade_cost_icon(UPGRADE_ROPE_ICON, origin, Vector2(39.0, 34.0))
+	draw_string(ThemeDB.fallback_font, origin + Vector2(20, 6), "x%d" % cost.x, HORIZONTAL_ALIGNMENT_LEFT, 48, 17, COLOR_UPGRADE_INK)
 	var plank_position := origin + Vector2(88, 0)
-	draw_resource_icon("plank", plank_position, Vector2(36, 36), -0.18)
-	draw_string(ThemeDB.fallback_font, plank_position + Vector2(22, 6), "x%d" % cost.y, HORIZONTAL_ALIGNMENT_LEFT, 48, 17, COLOR_INK)
+	draw_upgrade_cost_icon(UPGRADE_PLANK_ICON, plank_position, Vector2(41.0, 41.0))
+	draw_string(ThemeDB.fallback_font, plank_position + Vector2(22, 6), "x%d" % cost.y, HORIZONTAL_ALIGNMENT_LEFT, 48, 17, COLOR_UPGRADE_INK)
+
+
+func draw_upgrade_cost_icon(texture: Texture2D, position: Vector2, bounds: Vector2) -> void:
+	var texture_size := texture.get_size()
+	var fit_scale := minf(bounds.x / texture_size.x, bounds.y / texture_size.y)
+	var fitted_size := texture_size * fit_scale
+	draw_texture_rect(texture, Rect2(position - fitted_size * 0.5, fitted_size), false)
 
 
 func draw_upgrade_info_badge(rect: Rect2, selected: bool) -> void:
 	var color := COLOR_CORAL if selected else COLOR_WATER
 	draw_circle(rect.get_center(), 17.0, color)
 	draw_arc(rect.get_center(), 17.0, 0.0, TAU, 24, Color.WHITE, 2.0, true)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, 28), "!", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Color.WHITE)
+	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(0, 28), "!", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Color.WHITE)
 
 
 func draw_upgrade_info_panel() -> void:
 	if upgrade_info_open < 0:
 		return
-	var card_y := 175.0 if upgrade_info_open == 0 else 321.0
-	var panel_rect := Rect2(20, card_y, 286, 136)
+	var card_y := 175.0
+	match upgrade_info_open:
+		1: card_y = 276.0
+		2: card_y = 377.0
+	var panel_rect := Rect2(10, card_y, 268, 136)
 	var panel_color := Color(0.97, 0.94, 0.84, 0.97)
 	draw_panel(panel_rect, panel_color)
 	draw_colored_polygon(PackedVector2Array([
 		Vector2(panel_rect.end.x, card_y + 22),
-		Vector2(330, card_y + 31),
+		Vector2(293, card_y + 31),
 		Vector2(panel_rect.end.x, card_y + 42),
 	]), panel_color)
 	if upgrade_info_open == 0:
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 31), "SAIL UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 250, 20, COLOR_INK)
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 64), "Each level adds %d m" % int(SAIL_RANGE_BONUS), HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Color("#45647a"))
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 87), "to your maximum travel range.", HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Color("#45647a"))
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 116), "Current maximum: %d m" % int(current_max_distance()), HORIZONTAL_ALIGNMENT_LEFT, 250, 16, COLOR_WATER)
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "SAIL UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level adds %d m" % int(SAIL_RANGE_BONUS), HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "to your maximum travel range.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current maximum: %d m" % int(current_max_distance()), HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+	elif upgrade_info_open == 1:
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "GUARD UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level absorbs one more", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "rock collision before breaking.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current safe hits: %d" % protection_level, HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
 	else:
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 31), "PROTECTION UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 250, 20, COLOR_INK)
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 64), "Each level absorbs one more", HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Color("#45647a"))
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 87), "rock collision before breaking.", HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Color("#45647a"))
-		draw_string(ThemeDB.fallback_font, panel_rect.position + Vector2(16, 116), "Current safe hits: %d" % protection_level, HORIZONTAL_ALIGNMENT_LEFT, 250, 16, COLOR_WATER)
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "OAR UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level makes the raft", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "respond faster while steering.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		var steering_bonus := int(round((current_steering_speed() / BASE_STEERING_SPEED - 1.0) * 100.0))
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current steering bonus: %d%%" % steering_bonus, HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
 
 
 func draw_compact_button(rect: Rect2, label: String, enabled: bool, color: Color) -> void:
-	var button_color := color if enabled else Color("#8fa3ad")
-	draw_rect(Rect2(rect.position + Vector2(0, 4), rect.size), button_color.darkened(0.42))
-	draw_rect(rect, button_color)
-	draw_rect(rect, Color.WHITE if enabled else Color("#cbd3d6"), false, 2)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y * 0.67), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 16, Color.WHITE)
+	var paper_color := Color("#eadcb7") if enabled else Color("#c8c2ae")
+	var graphite_color := Color("#34291f") if enabled else Color("#625d53")
+	var accent_color := COLOR_UPGRADE_ACCENT_INK if enabled else Color("#6d665c")
+	var shadow_rect := Rect2(rect.position + Vector2(1.5, 3.0), rect.size)
+	var shadow_points := PackedVector2Array([
+		shadow_rect.position + Vector2(3.0, 0.0),
+		Vector2(shadow_rect.end.x - 3.0, shadow_rect.position.y),
+		shadow_rect.end - Vector2(0.0, 3.0),
+		shadow_rect.end - Vector2(3.0, 0.0),
+		Vector2(shadow_rect.position.x, shadow_rect.end.y - 3.0),
+		shadow_rect.position + Vector2(0.0, 3.0),
+	])
+	draw_colored_polygon(shadow_points, Color(0.12, 0.09, 0.06, 0.42))
+
+	var plaque_points := PackedVector2Array([
+		rect.position + Vector2(3.0, 0.0),
+		Vector2(rect.end.x - 3.0, rect.position.y),
+		Vector2(rect.end.x, rect.position.y + 3.0),
+		rect.end - Vector2(0.0, 3.0),
+		rect.end - Vector2(3.0, 0.0),
+		Vector2(rect.position.x + 3.0, rect.end.y),
+		Vector2(rect.position.x, rect.end.y - 3.0),
+		rect.position + Vector2(0.0, 3.0),
+	])
+	draw_colored_polygon(plaque_points, paper_color)
+
+	var hatch_color := Color(graphite_color, 0.10 if enabled else 0.06)
+	for hatch_index in 5:
+		var hatch_x := rect.position.x + 22.0 + float(hatch_index) * 23.0
+		draw_line(Vector2(hatch_x, rect.position.y + 4.0), Vector2(hatch_x - 9.0, rect.end.y - 4.0), hatch_color, 1.0, true)
+
+	var outline := PackedVector2Array([
+		rect.position + Vector2(3.0, 1.0),
+		Vector2(rect.end.x - 4.0, rect.position.y + 0.5),
+		Vector2(rect.end.x - 1.0, rect.position.y + 3.5),
+		Vector2(rect.end.x - 0.5, rect.end.y - 3.0),
+		Vector2(rect.end.x - 3.5, rect.end.y - 0.5),
+		Vector2(rect.position.x + 3.0, rect.end.y - 1.0),
+		Vector2(rect.position.x + 0.5, rect.end.y - 3.5),
+		rect.position + Vector2(1.0, 3.0),
+		rect.position + Vector2(3.0, 1.0),
+	])
+	draw_polyline(outline, graphite_color, 2.0, true)
+	draw_rect(Rect2(rect.position + Vector2(4.5, 4.0), rect.size - Vector2(9.0, 8.0)), Color(accent_color, 0.72), false, 1.0)
+
+	for screw_position in [
+		rect.position + Vector2(6.5, 6.5),
+		Vector2(rect.end.x - 6.5, rect.position.y + 6.5),
+		rect.end - Vector2(6.5, 6.5),
+		Vector2(rect.position.x + 6.5, rect.end.y - 6.5),
+	]:
+		draw_circle(screw_position, 1.8, graphite_color)
+		draw_line(screw_position - Vector2(1.2, 0.0), screw_position + Vector2(1.2, 0.0), paper_color.darkened(0.28), 0.8, true)
+
+	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(0.0, 23.0), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 17, accent_color)
 
 
 func draw_upgrade_placeholder(rect: Rect2) -> void:
 	draw_panel(rect, Color(0.88, 0.89, 0.84, 0.40))
-	draw_rect(Rect2(rect.position + Vector2(14, 14), rect.size - Vector2(28, 28)), Color(0.22, 0.34, 0.37, 0.22), false, 2)
+	draw_rect(Rect2(rect.position + Vector2(10, 10), rect.size - Vector2(20, 20)), Color(0.22, 0.34, 0.37, 0.22), false, 2)
 
 
 func draw_victory() -> void:
@@ -3444,7 +3757,7 @@ func draw_panel(rect: Rect2, color: Color = COLOR_PANEL) -> void:
 	draw_rect(rect, COLOR_INK, false, 4)
 
 
-func draw_button(rect: Rect2, label: String, enabled: bool, color: Color, alpha: float = 1.0, font_size: int = 25) -> void:
+func draw_button(rect: Rect2, label: String, enabled: bool, color: Color, alpha: float = 1.0, font_size: int = 25, font: Font = null) -> void:
 	var button_color := color if enabled else Color("#8fa3ad")
 	button_color.a *= clampf(alpha, 0.0, 1.0)
 	var shadow_color := button_color.darkened(0.42)
@@ -3456,7 +3769,8 @@ func draw_button(rect: Rect2, label: String, enabled: bool, color: Color, alpha:
 	draw_rect(Rect2(rect.position + Vector2(0, 7), rect.size), shadow_color)
 	draw_rect(rect, button_color)
 	draw_rect(rect, border_color, false, 3)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, rect.size.y * 0.64), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, text_color)
+	var button_font := ThemeDB.fallback_font if font == null else font
+	draw_string(button_font, rect.position + Vector2(0, rect.size.y * 0.64), label, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, text_color)
 
 
 func draw_text(value: String, position: Vector2, font_size: int, color: Color) -> void:
@@ -3625,14 +3939,11 @@ func draw_resource_glow(position: Vector2, kind: String, radius: float, phase: f
 
 func draw_resource_icon(kind: String, position: Vector2, size: Vector2, rotation: float = 0.0, alpha: float = 1.0) -> void:
 	draw_set_transform(position, rotation, Vector2.ONE)
-	if kind == "rope":
-		var rope_tint := Color(1.03, 1.18, 1.38, alpha)
-		draw_texture_rect(ROPE_SPRITE, Rect2(-size * 0.5, size), false, rope_tint)
-	else:
-		var cell_size := SPRITE_ATLAS.get_size() / 4.0
-		var source_rect := Rect2(Vector2(2, 2) * cell_size, cell_size)
-		var plank_tint := Color(1.04, 1.04, 1.02, alpha)
-		draw_texture_rect_region(SPRITE_ATLAS, Rect2(-size * 0.5, size), source_rect, plank_tint)
+	var resource_texture := ROPE_SPRITE if kind == "rope" else PLANK_SPRITE
+	var texture_size := resource_texture.get_size()
+	var fit_scale := minf(size.x / texture_size.x, size.y / texture_size.y)
+	var fitted_size := texture_size * fit_scale
+	draw_texture_rect(resource_texture, Rect2(-fitted_size * 0.5, fitted_size), false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

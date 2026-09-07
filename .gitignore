@@ -68,6 +68,10 @@ desktop.ini
 /assets/intro-scene/*.png
 /assets/intro-scene/*.png.import
 
+# One-off local asset preparation helpers
+/scripts/optimize_upgrade_scene.gd
+/scripts/optimize_upgrade_scene.gd.uid
+
 # Retired gameplay experiments and assets no longer referenced by the project
 /assets/impact/
 /scenes/fat_man_breath.tscn
