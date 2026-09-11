@@ -7,9 +7,16 @@ const RAFT_Y := 1035.0
 const SAVE_PATH := "user://save.cfg"
 const SPRITE_ATLAS: Texture2D = preload("res://assets/sprites/raft_escape_atlas_v1.png")
 const GAMEPLAY_RAFT_LVL1: Texture2D = preload("res://assets/sprites/raft-lvl1_optimized_v1.webp")
+const GAMEPLAY_SALVAGE_NET: Texture2D = preload("res://assets/sprites/salvage-net-gameplay_optimized_v1.webp")
+const WORKSHOP_FLAT_SALVAGE_NET: Texture2D = preload("res://assets/upgrade-scene/salvage-net-flat-workshop_optimized_v1.webp")
+const WORKSHOP_WOOD_GUARD: Texture2D = preload("res://assets/upgrade-scene/wood-guard-workshop_optimized_v3.webp")
 const GAMEPLAY_SAIL_LVL1: Texture2D = preload("res://assets/sprites/sail-lvl1_optimized_v1.webp")
+const GAMEPLAY_FOLDED_SAIL_LVL1: Texture2D = preload("res://assets/sprites/sail-folded-lvl1_optimized_v1.webp")
+const GAMEPLAY_FOLDED_SAIL_LVL4: Texture2D = preload("res://assets/sprites/sail-folded-lvl4_optimized_v1.webp")
+const GAMEPLAY_SAIL_UNFURL_LVL4_ATLAS: Texture2D = preload("res://assets/sprites/sail-unfurl-lvl4-atlas_optimized_v1.webp")
 const GAMEPLAY_FAT_BOY: Texture2D = preload("res://assets/sprites/fat-boy-on-raft_optimized_v1.webp")
 const GAMEPLAY_SKINNY_BOY: Texture2D = preload("res://assets/sprites/skinny-boy-on-raft_optimized_v1.webp")
+const GAMEPLAY_SKINNY_RAISE_SAIL_ATLAS: Texture2D = preload("res://assets/sprites/skinny-boy-raise-sail-atlas_v1.webp")
 const ISLAND_SPRITE: Texture2D = preload("res://assets/sprites/deserted_island_v1.png")
 const LAUNCH_PUSH_ATLAS: Texture2D = preload("res://assets/sprites/launch_push_atlas_v2.webp")
 const GAMEPLAY_OCEAN_SCENE: PackedScene = preload("res://scenes/gameplay_ocean.tscn")
@@ -62,15 +69,18 @@ const WORKSHOP_RAFT_BASE_POSITION := Vector2(358.0, 960.0)
 const SAIL_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/sail-sketch-upgrade_optimized_v1.webp")
 const SHIELD_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/guard-sketch-upgrade_optimized_v1.webp")
 const OAR_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/oar-sketch-upgrade.svg")
+const NET_UPGRADE_ICON: Texture2D = preload("res://assets/upgrade-scene/salvage-net-sketch-upgrade_optimized_v1.webp")
 const UPGRADE_ROPE_ICON: Texture2D = preload("res://assets/sprites/rope_coil_optimized_v2.webp")
 const UPGRADE_PLANK_ICON: Texture2D = preload("res://assets/sprites/plank_collectible_optimized_v2.webp")
 const ROPE_SPRITE: Texture2D = preload("res://assets/sprites/rope_coil_optimized_v2.webp")
 const PLANK_SPRITE: Texture2D = preload("res://assets/sprites/plank_collectible_optimized_v2.webp")
 const BASE_RAFT_RANGE := 75.0
 const SAIL_RANGE_BONUS := 28.0
-const SAIL_MAX_LEVEL := 5
+const SAIL_MAX_LEVEL := 7
 const PROTECTION_MAX_LEVEL := 4
 const OAR_MAX_LEVEL := 4
+const NET_MAX_LEVEL := 4
+const NET_PULL_RADIUS_BONUS_PERCENT := 20
 const BASE_STEERING_SPEED := 540.0
 const OAR_STEERING_BONUS := 45.0
 const LAUNCH_FULL_TIME := 2.60
@@ -85,6 +95,7 @@ const INTRO_PUSH_MAX_TIME := 1.65
 const INTRO_JUMP_TIME := 0.58
 const INTRO_FAILED_JUMP_TIME := 0.28
 const INTRO_SETTLE_TIME := 0.72
+const SAIL_RAISE_DURATION := 0.95
 const OPENING_EXTERIOR_DURATION := 3.5
 const OPENING_EXTERIOR_TRANSITION_DURATION := 0.65
 const OPENING_EXTERIOR_OCEAN_SPEED := 145.0
@@ -236,6 +247,7 @@ const OPENING_SKINNY_RAFT_PREVIEW_ONLY := false
 const OPENING_FAT_RAFT2_PREVIEW_ONLY := false
 const UPGRADE_SCREEN_TEST_MODE := true
 const GAMEPLAY_ZERO_PROGRESS_TEST_MODE := false
+const GAMEPLAY_SAIL_LEVEL_4_TEST_MODE := false
 const OPENING_PLANK_LAYOUT := [
 	{"position": Vector2(78.0, 338.0), "size": 154.0, "rotation": -0.22},
 	{"position": Vector2(168.0, 365.0), "size": 166.0, "rotation": 0.15},
@@ -293,6 +305,10 @@ var raft_level := 1
 var sail_level := 0
 var protection_level := 0
 var oar_level := 0
+var net_level := 0
+var sail_raised := false
+var sail_raise_active := false
+var sail_raise_time := 0.0
 var raft_health := 1
 var return_reason := ""
 var return_scene_visible := false
@@ -358,6 +374,9 @@ var gameplay_ocean: Node2D
 var workshop_preview_background: Node2D
 var workshop_branches_rig: Node2D
 var workshop_raft_preview: Node2D
+var workshop_folded_sail_preview: Sprite2D
+var workshop_net_preview: Sprite2D
+var workshop_guard_preview: Sprite2D
 var workshop_character_rig: Node2D
 var workshop_fat_man_rig: Node2D
 var workshop_animation_time_override := -1.0
@@ -375,10 +394,13 @@ var upgrade_button := Rect2(100, 1010, 520, 88)
 var sail_upgrade_button := Rect2(563, 219, 129, 34)
 var protection_upgrade_button := Rect2(563, 320, 129, 34)
 var oar_upgrade_button := Rect2(563, 421, 129, 34)
+var net_upgrade_button := Rect2(563, 522, 129, 34)
 var sail_info_button := Rect2(654, 180, 38, 38)
 var protection_info_button := Rect2(654, 281, 38, 38)
 var oar_info_button := Rect2(654, 382, 38, 38)
+var net_info_button := Rect2(654, 483, 38, 38)
 var upgrade_back_button := Rect2(370, 930, 300, 66)
+var raise_sail_button := Rect2(470, 218, 225, 62)
 var victory_button := Rect2(120, 1100, 480, 88)
 
 
@@ -394,6 +416,10 @@ func _ready() -> void:
 	if UPGRADE_SCREEN_TEST_MODE:
 		state = State.UPGRADES
 		state_time = 0.0
+		net_level = maxi(net_level, 1)
+		protection_level = maxi(protection_level, 1)
+	elif GAMEPLAY_SAIL_LEVEL_4_TEST_MODE:
+		start_sail_level_4_gameplay_test()
 	elif GAMEPLAY_ZERO_PROGRESS_TEST_MODE:
 		start_zero_progress_gameplay_test()
 	elif OPENING_BEACH_PREVIEW_ONLY:
@@ -512,6 +538,14 @@ func _ready() -> void:
 		launch_dialogue_line_time = 0.7
 		capture_filename = "launch_dialogue.png"
 		capture_requested = true
+	elif "--capture-launch-sail" in user_args:
+		sail_level = 1
+		sync_visual_raft_level()
+		return_to_launch_screen()
+		launch_dialogue_active = false
+		launch_dialogue_wait_remaining = 99.0
+		capture_filename = "launch_folded_sail.png"
+		capture_requested = true
 	elif "--capture-play" in user_args:
 		prepare_gameplay_capture()
 		capture_filename = "gameplay.png"
@@ -521,6 +555,29 @@ func _ready() -> void:
 		sync_visual_raft_level()
 		prepare_gameplay_capture()
 		capture_filename = "gameplay_sail.png"
+		capture_requested = true
+	elif "--capture-sail-raising" in user_args:
+		sail_level = 1
+		sync_visual_raft_level()
+		prepare_gameplay_capture()
+		sail_raise_active = true
+		sail_raise_time = SAIL_RAISE_DURATION * 0.43
+		capture_filename = "gameplay_sail_raising.png"
+		capture_requested = true
+	elif "--capture-sail-raised" in user_args:
+		sail_level = 1
+		sync_visual_raft_level()
+		prepare_gameplay_capture()
+		sail_raised = true
+		capture_filename = "gameplay_sail_raised.png"
+		capture_requested = true
+	elif "--capture-sail-lvl4-unfurl" in user_args:
+		sail_level = 4
+		sync_visual_raft_level()
+		prepare_gameplay_capture()
+		sail_raise_active = true
+		sail_raise_time = SAIL_RAISE_DURATION * 0.62
+		capture_filename = "gameplay_sail_lvl4_unfurl.png"
 		capture_requested = true
 	elif "--capture-results" in user_args:
 		prepare_results_capture()
@@ -550,8 +607,8 @@ func _ready() -> void:
 		state = State.UPGRADES
 		total_rope = maxi(total_rope, 25)
 		total_planks = maxi(total_planks, 8)
-		upgrade_info_open = 0
-		capture_filename = "upgrades_info.png"
+		upgrade_info_open = 3 if "--capture-net-info" in user_args else 0
+		capture_filename = "upgrades_net_info.png" if upgrade_info_open == 3 else "upgrades_info.png"
 		capture_requested = true
 	elif "--capture-upgrades-water-late" in user_args:
 		state = State.UPGRADES
@@ -733,9 +790,38 @@ func setup_workshop_background() -> void:
 	workshop_raft_preview.z_index = -89
 	add_child(workshop_raft_preview)
 
+	workshop_folded_sail_preview = Sprite2D.new()
+	workshop_folded_sail_preview.name = "WorkshopFoldedSailPreview"
+	workshop_folded_sail_preview.position = Vector2(435.0, 895.0)
+	workshop_folded_sail_preview.rotation = deg_to_rad(-45.0)
+	workshop_folded_sail_preview.scale = Vector2.ONE * 0.81
+	workshop_folded_sail_preview.show_behind_parent = true
+	workshop_folded_sail_preview.z_index = -89
+	add_child(workshop_folded_sail_preview)
+
+	workshop_net_preview = Sprite2D.new()
+	workshop_net_preview.name = "WorkshopNetPreview"
+	workshop_net_preview.texture = WORKSHOP_FLAT_SALVAGE_NET
+	workshop_net_preview.position = Vector2(280.0, 700.0)
+	workshop_net_preview.rotation = 0.0
+	workshop_net_preview.scale = Vector2.ONE * 0.46
+	workshop_net_preview.show_behind_parent = true
+	workshop_net_preview.z_index = -91
+	add_child(workshop_net_preview)
+
+	workshop_guard_preview = Sprite2D.new()
+	workshop_guard_preview.name = "WorkshopGuardPreview"
+	workshop_guard_preview.texture = WORKSHOP_WOOD_GUARD
+	workshop_guard_preview.position = Vector2(468.0, 1080.0)
+	workshop_guard_preview.rotation = deg_to_rad(-12.0)
+	workshop_guard_preview.scale = Vector2.ONE * 0.56
+	workshop_guard_preview.show_behind_parent = true
+	workshop_guard_preview.z_index = -88
+	add_child(workshop_guard_preview)
+
 
 func update_workshop_background() -> void:
-	if not is_instance_valid(workshop_preview_background) or not is_instance_valid(workshop_branches_rig) or not is_instance_valid(workshop_raft_preview) or not is_instance_valid(workshop_character_rig) or not is_instance_valid(workshop_fat_man_rig):
+	if not is_instance_valid(workshop_preview_background) or not is_instance_valid(workshop_branches_rig) or not is_instance_valid(workshop_raft_preview) or not is_instance_valid(workshop_folded_sail_preview) or not is_instance_valid(workshop_net_preview) or not is_instance_valid(workshop_guard_preview) or not is_instance_valid(workshop_character_rig) or not is_instance_valid(workshop_fat_man_rig):
 		return
 	var is_visible := state == State.UPGRADES
 	workshop_preview_background.visible = is_visible
@@ -743,6 +829,11 @@ func update_workshop_background() -> void:
 	workshop_raft_preview.visible = is_visible
 	workshop_character_rig.visible = is_visible
 	workshop_fat_man_rig.visible = is_visible
+	workshop_folded_sail_preview.visible = is_visible and sail_level >= 1
+	if workshop_folded_sail_preview.visible:
+		workshop_folded_sail_preview.texture = GAMEPLAY_FOLDED_SAIL_LVL4 if sail_level >= 4 else GAMEPLAY_FOLDED_SAIL_LVL1
+	workshop_net_preview.visible = is_visible and net_level >= 1
+	workshop_guard_preview.visible = is_visible and protection_level >= 1
 	if is_visible and workshop_animation_time_override >= 0.0:
 		workshop_branches_rig.call("seek_preview", workshop_animation_time_override)
 		workshop_character_rig.call("seek_preview", workshop_animation_time_override)
@@ -768,6 +859,7 @@ func update_intro(delta: float) -> void:
 
 
 func update_playing(delta: float) -> void:
+	update_sail_raise_animation(delta)
 	var speed := advance_world(delta)
 
 	var keyboard_axis := 0.0
@@ -822,6 +914,35 @@ func update_playing(delta: float) -> void:
 			begin_victory()
 		else:
 			begin_return("THE CURRENT IS TOO STRONG")
+
+
+func update_sail_raise_animation(delta: float) -> void:
+	if not sail_raise_active:
+		return
+	sail_raise_time = minf(sail_raise_time + delta, SAIL_RAISE_DURATION)
+	if sail_raise_time >= SAIL_RAISE_DURATION:
+		sail_raise_active = false
+		sail_raised = true
+
+
+func sail_raise_progress() -> float:
+	if sail_raised:
+		return 1.0
+	if not sail_raise_active:
+		return 0.0
+	return clampf(sail_raise_time / SAIL_RAISE_DURATION, 0.0, 1.0)
+
+
+func can_raise_sail() -> bool:
+	return state == State.PLAYING and sail_level >= 1 and not sail_raised and not sail_raise_active
+
+
+func start_raising_sail() -> void:
+	if not can_raise_sail():
+		return
+	sail_raise_active = true
+	sail_raise_time = 0.0
+	reset_touch_joystick()
 
 
 func advance_world(delta: float) -> float:
@@ -935,6 +1056,7 @@ func start_intro() -> void:
 	state = State.INTRO
 	state_time = 0.0
 	intro_time = 0.0
+	reset_sail_raise_state()
 	distance_m = 0.0
 	world_scroll = 0.0
 	run_rope = 0
@@ -1026,6 +1148,7 @@ func launch_quality_for_charge(charge: float) -> float:
 func return_to_launch_screen() -> void:
 	state = State.HOME
 	state_time = 0.0
+	reset_sail_raise_state()
 	reset_launch_dialogues()
 	upgrade_returns_to_home = false
 	reset_touch_joystick()
@@ -1048,6 +1171,28 @@ func start_zero_progress_gameplay_test() -> void:
 	sail_level = 0
 	protection_level = 0
 	oar_level = 0
+	net_level = 0
+	sync_visual_raft_level()
+	raft_health = maximum_raft_health()
+	launch_hold_ratio = 0.78
+	launch_power = 0.78
+	launch_overcharged = false
+	launch_is_perfect = false
+	launch_cruise_speed = launch_speed_for_hold(launch_hold_ratio)
+	raft_forward_speed = launch_cruise_speed
+	run_target_distance = current_max_distance()
+	begin_run()
+
+
+func start_sail_level_4_gameplay_test() -> void:
+	total_rope = 0
+	total_planks = 0
+	run_rope = 0
+	run_planks = 0
+	sail_level = 4
+	protection_level = 0
+	oar_level = 0
+	net_level = 1
 	sync_visual_raft_level()
 	raft_health = maximum_raft_health()
 	launch_hold_ratio = 0.78
@@ -1068,6 +1213,7 @@ func begin_run(continue_from_intro: bool = false) -> void:
 	return_elapsed = 0.0
 	return_impact_time = 0.0
 	if not continue_from_intro:
+		reset_sail_raise_state()
 		distance_m = 0.0
 		world_scroll = 0.0
 		run_rope = 0
@@ -1082,6 +1228,12 @@ func begin_run(continue_from_intro: bool = false) -> void:
 		obstacles.clear()
 		pickups.clear()
 	spawn_timer = 0.20
+
+
+func reset_sail_raise_state() -> void:
+	sail_raised = false
+	sail_raise_active = false
+	sail_raise_time = 0.0
 
 
 func begin_return(reason: String) -> void:
@@ -1401,6 +1553,22 @@ func try_purchase_oar() -> void:
 	show_upgrade_feedback("OAR UPGRADED  +8% STEERING", true)
 
 
+func try_purchase_net() -> void:
+	if net_level >= NET_MAX_LEVEL:
+		show_upgrade_feedback("SALVAGE NET IS ALREADY MAXED", false)
+		return
+	var cost := net_upgrade_cost(net_level)
+	if not can_pay(cost):
+		show_upgrade_feedback("NOT ENOUGH MATERIALS", false)
+		return
+	total_rope -= cost.x
+	total_planks -= cost.y
+	net_level += 1
+	save_progress()
+	burst(net_upgrade_button.get_center(), COLOR_ROPE, 24)
+	show_upgrade_feedback("SALVAGE NET UPGRADED", true)
+
+
 func show_upgrade_feedback(message: String, success: bool) -> void:
 	upgrade_feedback = message
 	upgrade_feedback_time = 2.0 if success else 1.4
@@ -1434,6 +1602,8 @@ func sail_upgrade_cost(level: int) -> Vector2i:
 		2: return Vector2i(22, 7)
 		3: return Vector2i(36, 11)
 		4: return Vector2i(55, 16)
+		5: return Vector2i(80, 23)
+		6: return Vector2i(112, 31)
 		_: return Vector2i.ZERO
 
 
@@ -1455,6 +1625,15 @@ func oar_upgrade_cost(level: int) -> Vector2i:
 		_: return Vector2i.ZERO
 
 
+func net_upgrade_cost(level: int) -> Vector2i:
+	match level:
+		0: return Vector2i(9, 3)
+		1: return Vector2i(18, 6)
+		2: return Vector2i(32, 10)
+		3: return Vector2i(50, 15)
+		_: return Vector2i.ZERO
+
+
 func can_pay(cost: Vector2i) -> bool:
 	return total_rope >= cost.x and total_planks >= cost.y
 
@@ -1462,9 +1641,10 @@ func can_pay(cost: Vector2i) -> bool:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			var sail_button_pressed := can_raise_sail() and raise_sail_button.has_point(event.position)
 			pointer_active = true
 			handle_press(event.position)
-			if state == State.PLAYING:
+			if state == State.PLAYING and not sail_button_pressed:
 				touch_steering_active = true
 				active_touch_index = event.index
 				joystick_target_axis = steering_axis_for_touch(event.position.x)
@@ -1525,7 +1705,10 @@ func handle_press(position: Vector2) -> void:
 			if launch_button.has_point(position):
 				start_charging()
 		State.PLAYING:
-			target_x = position.x
+			if can_raise_sail() and raise_sail_button.has_point(position):
+				start_raising_sail()
+			else:
+				target_x = position.x
 		State.RESULTS:
 			if not results_actions_ready():
 				return
@@ -1540,12 +1723,16 @@ func handle_press(position: Vector2) -> void:
 				upgrade_info_open = -1 if upgrade_info_open == 1 else 1
 			elif oar_info_button.has_point(position):
 				upgrade_info_open = -1 if upgrade_info_open == 2 else 2
+			elif net_info_button.has_point(position):
+				upgrade_info_open = -1 if upgrade_info_open == 3 else 3
 			elif sail_upgrade_button.has_point(position):
 				try_purchase_sail()
 			elif protection_upgrade_button.has_point(position):
 				try_purchase_protection()
 			elif oar_upgrade_button.has_point(position):
 				try_purchase_oar()
+			elif net_upgrade_button.has_point(position):
+				try_purchase_net()
 			elif upgrade_back_button.has_point(position):
 				close_upgrade_screen()
 			else:
@@ -1563,6 +1750,7 @@ func save_progress() -> void:
 	config.set_value("progress", "sail_level", sail_level)
 	config.set_value("progress", "protection_level", protection_level)
 	config.set_value("progress", "oar_level", oar_level)
+	config.set_value("progress", "net_level", net_level)
 	config.set_value("progress", "opening_seen", opening_seen)
 	config.save(SAVE_PATH)
 
@@ -1579,6 +1767,7 @@ func load_progress() -> void:
 		sail_level = clampi(int(config.get_value("progress", "sail_level", 0)), 0, SAIL_MAX_LEVEL)
 		protection_level = clampi(int(config.get_value("progress", "protection_level", 0)), 0, PROTECTION_MAX_LEVEL)
 		oar_level = clampi(int(config.get_value("progress", "oar_level", 0)), 0, OAR_MAX_LEVEL)
+		net_level = clampi(int(config.get_value("progress", "net_level", 0)), 0, NET_MAX_LEVEL)
 	else:
 		var legacy_level := clampi(int(config.get_value("progress", "raft_level", 1)), 1, 3)
 		match legacy_level:
@@ -1594,10 +1783,11 @@ func load_progress() -> void:
 
 func run_smoke_test() -> void:
 	assert(max_distance_for_sail(0) == 75.0)
-	assert(max_distance_for_sail(SAIL_MAX_LEVEL) == 215.0)
+	assert(max_distance_for_sail(SAIL_MAX_LEVEL) == 271.0)
 	assert(sail_upgrade_cost(0) == Vector2i(6, 2))
 	assert(protection_upgrade_cost(0) == Vector2i(8, 3))
 	assert(oar_upgrade_cost(0) == Vector2i(5, 2))
+	assert(net_upgrade_cost(0) == Vector2i(9, 3))
 	oar_level = 0
 	assert(current_steering_speed() == BASE_STEERING_SPEED)
 	oar_level = OAR_MAX_LEVEL
@@ -3246,6 +3436,8 @@ func draw_game() -> void:
 		draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(1.0, 0.18, 0.15, hit_flash * 0.85))
 
 	draw_game_hud()
+	if can_raise_sail():
+		draw_button(raise_sail_button, "RAISE SAIL", true, COLOR_CORAL, 1.0, 22, UPGRADE_UI_BOLD_FONT)
 	if touch_joystick_enabled and state == State.PLAYING:
 		draw_touch_joystick()
 	if state == State.RETURNING:
@@ -3319,6 +3511,7 @@ func draw_upgrade_icon(index: int, position: Vector2, size: Vector2) -> void:
 	match index:
 		1: texture = SHIELD_UPGRADE_ICON
 		2: texture = OAR_UPGRADE_ICON
+		3: texture = NET_UPGRADE_ICON
 	var texture_size := texture.get_size()
 	var fit_scale := minf(size.x / texture_size.x, size.y / texture_size.y)
 	var fitted_size := texture_size * fit_scale
@@ -3492,8 +3685,7 @@ func draw_upgrades() -> void:
 	draw_upgrade_card(Rect2(293, 175, 407, 96), 0, "SAIL", sail_level, SAIL_MAX_LEVEL)
 	draw_upgrade_card(Rect2(293, 276, 407, 96), 1, "GUARD", protection_level, PROTECTION_MAX_LEVEL)
 	draw_upgrade_card(Rect2(293, 377, 407, 96), 2, "OAR", oar_level, OAR_MAX_LEVEL)
-	draw_upgrade_placeholder(Rect2(293, 478, 407, 96))
-	draw_upgrade_placeholder(Rect2(293, 579, 407, 96))
+	draw_upgrade_card(Rect2(293, 478, 407, 96), 3, "SALVAGE NET", net_level, NET_MAX_LEVEL)
 	draw_upgrade_info_panel()
 
 	if upgrade_feedback_time > 0.0 and not upgrade_feedback.is_empty():
@@ -3593,7 +3785,8 @@ func wrap_upgrade_dialogue_text(text: String, max_width: float, font_size: int) 
 func draw_upgrade_card(rect: Rect2, icon_index: int, title: String, level: int, max_level: int) -> void:
 	draw_panel(rect, Color(0.97, 0.94, 0.84, 0.96))
 	draw_upgrade_icon(icon_index, rect.position + Vector2(50.0, 51.0), Vector2(84.0, 84.0))
-	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(92, 28), title, HORIZONTAL_ALIGNMENT_CENTER, 140, 20, COLOR_UPGRADE_INK)
+	var title_font_size := 18 if title.length() > 9 else 20
+	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(92, 28), title, HORIZONTAL_ALIGNMENT_CENTER, 140, title_font_size, COLOR_UPGRADE_INK)
 	draw_string(ThemeDB.fallback_font, rect.position + Vector2(232, 27), "LEVEL %d / %d" % [level, max_level], HORIZONTAL_ALIGNMENT_CENTER, 115, 14, COLOR_UPGRADE_MUTED_INK)
 	var info_rect := sail_info_button
 	var button_rect := sail_upgrade_button
@@ -3607,6 +3800,10 @@ func draw_upgrade_card(rect: Rect2, icon_index: int, title: String, level: int, 
 			info_rect = oar_info_button
 			button_rect = oar_upgrade_button
 			cost = oar_upgrade_cost(level)
+		3:
+			info_rect = net_info_button
+			button_rect = net_upgrade_button
+			cost = net_upgrade_cost(level)
 	draw_upgrade_info_badge(info_rect, upgrade_info_open == icon_index)
 	if level >= max_level:
 		draw_string(UPGRADE_UI_FONT, rect.position + Vector2(101, 67), "NO MORE MATERIALS NEEDED", HORIZONTAL_ALIGNMENT_CENTER, 165, 12, COLOR_UPGRADE_MUTED_INK)
@@ -3645,6 +3842,7 @@ func draw_upgrade_info_panel() -> void:
 	match upgrade_info_open:
 		1: card_y = 276.0
 		2: card_y = 377.0
+		3: card_y = 478.0
 	var panel_rect := Rect2(10, card_y, 268, 136)
 	var panel_color := Color(0.97, 0.94, 0.84, 0.97)
 	draw_panel(panel_rect, panel_color)
@@ -3663,12 +3861,17 @@ func draw_upgrade_info_panel() -> void:
 		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level absorbs one more", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
 		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "rock collision before breaking.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
 		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current safe hits: %d" % protection_level, HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
-	else:
+	elif upgrade_info_open == 2:
 		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "OAR UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
 		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level makes the raft", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
 		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "respond faster while steering.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
 		var steering_bonus := int(round((current_steering_speed() / BASE_STEERING_SPEED - 1.0) * 100.0))
 		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current steering bonus: %d%%" % steering_bonus, HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+	else:
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "SALVAGE NET", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level pulls floating", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "materials from farther away.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current pull bonus: %d%%" % (net_level * NET_PULL_RADIUS_BONUS_PERCENT), HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
 
 
 func draw_compact_button(rect: Rect2, label: String, enabled: bool, color: Color) -> void:
@@ -3866,6 +4069,8 @@ func draw_top_raft(position: Vector2, level: int, health: int, occupants: int = 
 	var is_damaged := health < maximum_raft_health()
 	var raft_tint := Color(0.82, 0.76, 0.72) if is_damaged else Color.WHITE
 	draw_set_transform(position, raft_rotation, Vector2.ONE)
+	if net_level >= 1:
+		draw_attached_salvage_net(position, raft_rotation, raft_tint)
 	draw_texture_rect(
 		GAMEPLAY_RAFT_LVL1,
 		Rect2(Vector2.ONE * -sprite_size * 0.5, Vector2.ONE * sprite_size),
@@ -3874,13 +4079,7 @@ func draw_top_raft(position: Vector2, level: int, health: int, occupants: int = 
 	)
 
 	if sail_level >= 1:
-		var sail_size := sprite_size * 0.98
-		draw_texture_rect(
-			GAMEPLAY_SAIL_LVL1,
-			Rect2(Vector2(-sail_size * 0.5, -sail_size * 0.5 - 5.0), Vector2.ONE * sail_size),
-			false,
-			raft_tint
-		)
+		draw_animated_raft_sail(position, raft_rotation, sprite_size, raft_tint)
 
 	if is_damaged:
 		draw_polyline(PackedVector2Array([
@@ -3893,12 +4092,15 @@ func draw_top_raft(position: Vector2, level: int, health: int, occupants: int = 
 	if occupants >= 1:
 		var skinny_position := Vector2(31.0, 4.0)
 		var skinny_size := 92.4
-		draw_texture_rect(
-			GAMEPLAY_SKINNY_BOY,
-			Rect2(skinny_position - Vector2.ONE * skinny_size * 0.5, Vector2.ONE * skinny_size),
-			false,
-			raft_tint
-		)
+		if sail_raise_active:
+			draw_skinny_raising_sail(position, raft_rotation, skinny_position, skinny_size, raft_tint)
+		else:
+			draw_texture_rect(
+				GAMEPLAY_SKINNY_BOY,
+				Rect2(skinny_position - Vector2.ONE * skinny_size * 0.5, Vector2.ONE * skinny_size),
+				false,
+				raft_tint
+			)
 	if occupants >= 2:
 		var fat_position := Vector2(-31.0, 23.0)
 		var fat_size := 99.0
@@ -3910,6 +4112,154 @@ func draw_top_raft(position: Vector2, level: int, health: int, occupants: int = 
 		)
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func draw_attached_salvage_net(raft_position: Vector2, raft_rotation: float, raft_tint: Color) -> void:
+	var texture_size := GAMEPLAY_SALVAGE_NET.get_size()
+	var target_height := 190.0
+	var target_size := Vector2(target_height * texture_size.x / texture_size.y, target_height)
+	var local_center := Vector2(130.0, 101.0)
+	var net_rotation := deg_to_rad(-72.0)
+	var world_center := raft_position + local_center.rotated(raft_rotation)
+	draw_set_transform(world_center, raft_rotation + net_rotation, Vector2.ONE)
+	draw_texture_rect(
+		GAMEPLAY_SALVAGE_NET,
+		Rect2(-target_size * 0.5, target_size),
+		false,
+		raft_tint
+	)
+	# Continue drawing the raft in its own local coordinate system. Drawing the net
+	# first makes the hidden end of its handle look hooked under the rear planks.
+	draw_set_transform(raft_position, raft_rotation, Vector2.ONE)
+
+
+func draw_skinny_raising_sail(raft_position: Vector2, raft_rotation: float, local_position: Vector2, sprite_size: float, raft_tint: Color) -> void:
+	var progress := sail_raise_progress()
+	var lean_in := smoothstep(0.0, 0.18, progress)
+	var lean_out := 1.0 - smoothstep(0.72, 1.0, progress)
+	var lean_amount := lean_in * lean_out
+	var animated_position := local_position + Vector2(-7.0 * lean_amount, -2.0 * lean_amount)
+	var character_rotation := deg_to_rad(-7.0) * lean_amount
+	var world_position := raft_position + animated_position.rotated(raft_rotation)
+
+	var atlas_cell := Vector2i.ZERO
+	if progress < 0.14:
+		atlas_cell = Vector2i(0, 0)
+	elif progress < 0.33:
+		atlas_cell = Vector2i(1, 0)
+	elif progress < 0.50:
+		atlas_cell = Vector2i(0, 1)
+	elif progress < 0.67:
+		atlas_cell = Vector2i(1, 0)
+	elif progress < 0.82:
+		atlas_cell = Vector2i(0, 1)
+	else:
+		atlas_cell = Vector2i(0, 0)
+
+	var atlas_cell_size := GAMEPLAY_SKINNY_RAISE_SAIL_ATLAS.get_size() * 0.5
+	var atlas_source := Rect2(Vector2(atlas_cell) * atlas_cell_size, atlas_cell_size)
+
+	draw_set_transform(world_position, raft_rotation + character_rotation, Vector2.ONE)
+	draw_texture_rect_region(
+		GAMEPLAY_SKINNY_RAISE_SAIL_ATLAS,
+		Rect2(Vector2.ONE * -sprite_size * 0.5, Vector2.ONE * sprite_size),
+		atlas_source,
+		raft_tint
+	)
+	draw_set_transform(raft_position, raft_rotation, Vector2.ONE)
+
+
+func draw_animated_raft_sail(raft_position: Vector2, raft_rotation: float, sprite_size: float, raft_tint: Color) -> void:
+	var progress := sail_raise_progress()
+	var folded_texture := GAMEPLAY_FOLDED_SAIL_LVL4 if sail_level >= 4 else GAMEPLAY_FOLDED_SAIL_LVL1
+	var folded_texture_size := folded_texture.get_size()
+	var folded_width := sprite_size * (0.82 if sail_level >= 4 else 0.69)
+	var folded_size := Vector2(folded_width, folded_width * folded_texture_size.y / folded_texture_size.x)
+	var sail_base := Vector2(0.0, -34.0)
+	var sail_world_base := raft_position + sail_base.rotated(raft_rotation)
+
+	# The bundled sail pivots around its fixed right end, which is its base.
+	if progress < 0.58:
+		var lift_phase := smoothstep(0.0, 1.0, clampf(progress / 0.46, 0.0, 1.0))
+		var folded_pivot_offset := Vector2(0.0, folded_size.y * 0.46)
+		var folded_forward_offset := Vector2(-61.0, -4.0)
+		var folded_rest_center := folded_forward_offset - folded_pivot_offset
+		var folded_pivot := sail_base + folded_rest_center + Vector2(folded_size.x * 0.5, 0.0)
+		var folded_world_pivot := raft_position + folded_pivot.rotated(raft_rotation)
+		var folded_rotation := lerpf(0.0, deg_to_rad(78.0), lift_phase)
+		var folded_alpha := 1.0 - smoothstep(0.40, 0.58, progress)
+		var folded_tint := raft_tint
+		folded_tint.a *= folded_alpha
+		draw_set_transform(folded_world_pivot, raft_rotation + folded_rotation, Vector2.ONE)
+		draw_texture_rect(
+			folded_texture,
+			Rect2(Vector2(-folded_size.x, -folded_size.y * 0.5), folded_size),
+			false,
+			folded_tint
+		)
+
+	# Once the mast is nearly upright, unfold the upgraded sail with real frames.
+	if sail_level >= 4:
+		draw_level4_unfurling_sail(sail_world_base, raft_rotation, sprite_size, raft_tint, progress)
+		# Restore the raft-local transform before drawing damage and the passengers.
+		draw_set_transform(raft_position, raft_rotation, Vector2.ONE)
+		return
+
+	# Levels 1-3 keep their original opening animation unchanged.
+	if progress > 0.40:
+		var open_phase := smoothstep(0.0, 1.0, clampf((progress - 0.40) / 0.52, 0.0, 1.0))
+		var sail_scale := lerpf(0.18, 1.0, open_phase)
+		if progress > 0.82 and progress < 1.0:
+			sail_scale += sin(inverse_lerp(0.82, 1.0, progress) * PI) * 0.035
+		var sail_size := sprite_size * 0.98 * sail_scale
+		var sail_alpha := smoothstep(0.40, 0.57, progress)
+		var sail_tint := raft_tint
+		sail_tint.a *= sail_alpha
+		var sail_pivot_uv := Vector2(0.32, 0.87)
+		var sail_rotation := lerpf(deg_to_rad(5.0), 0.0, open_phase)
+		draw_set_transform(sail_world_base, raft_rotation + sail_rotation, Vector2.ONE)
+		draw_texture_rect(
+			GAMEPLAY_SAIL_LVL1,
+			Rect2(-sail_pivot_uv * sail_size, Vector2.ONE * sail_size),
+			false,
+			sail_tint
+		)
+
+	# Restore the raft-local transform before drawing damage and the passengers.
+	draw_set_transform(raft_position, raft_rotation, Vector2.ONE)
+
+
+func draw_level4_unfurling_sail(sail_world_base: Vector2, raft_rotation: float, sprite_size: float, raft_tint: Color, progress: float) -> void:
+	if progress <= 0.40:
+		return
+
+	var atlas_cell := Vector2i.ZERO
+	var pivot_uv := Vector2(0.36, 0.91)
+	if progress < 0.54:
+		atlas_cell = Vector2i(0, 0)
+		pivot_uv = Vector2(0.36, 0.91)
+	elif progress < 0.66:
+		atlas_cell = Vector2i(1, 0)
+		pivot_uv = Vector2(0.325, 0.92)
+	elif progress < 0.80:
+		atlas_cell = Vector2i(0, 1)
+		pivot_uv = Vector2(0.36, 0.87)
+	else:
+		atlas_cell = Vector2i(1, 1)
+		pivot_uv = Vector2(0.325, 0.87)
+
+	var sail_size := sprite_size * 1.17
+	var sail_tint := raft_tint
+	sail_tint.a *= smoothstep(0.40, 0.49, progress)
+	var atlas_cell_size := GAMEPLAY_SAIL_UNFURL_LVL4_ATLAS.get_size() * 0.5
+	var atlas_source := Rect2(Vector2(atlas_cell) * atlas_cell_size, atlas_cell_size)
+	draw_set_transform(sail_world_base, raft_rotation, Vector2.ONE)
+	draw_texture_rect_region(
+		GAMEPLAY_SAIL_UNFURL_LVL4_ATLAS,
+		Rect2(-pivot_uv * sail_size, Vector2.ONE * sail_size),
+		atlas_source,
+		sail_tint
+	)
 
 
 func draw_pickup(pickup: Dictionary) -> void:
