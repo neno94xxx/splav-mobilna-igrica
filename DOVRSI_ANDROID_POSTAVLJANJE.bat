@@ -15,7 +15,7 @@ echo.
 echo Ovaj korak preuzima sluzbene Android SDK pakete.
 echo Google ce prikazati Android SDK licencu. Procitaj je i prihvati samo ako se slazes.
 echo.
-call "%SDKMANAGER%" --sdk_root="%ANDROID_HOME%" "platform-tools" "build-tools;35.0.1" "platforms;android-35"
+call "%SDKMANAGER%" --sdk_root="%ANDROID_HOME%" "platform-tools" "build-tools;36.1.0" "platforms;android-36"
 if errorlevel 1 (
   echo.
   echo Android SDK nije dovrsen. Provjeri internet i odgovor na licencu.
@@ -26,4 +26,3 @@ if errorlevel 1 (
 echo.
 echo Android SDK je spreman. Sada pokreni IZRADI_ANDROID_APK.bat.
 pause
-

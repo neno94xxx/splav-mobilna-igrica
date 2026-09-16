@@ -13,6 +13,7 @@ config_version=5
 config/name="Raft Escape"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://assets/app-icon/raft_escape_icon_main_512_v1.png"
 
 [debug]
 

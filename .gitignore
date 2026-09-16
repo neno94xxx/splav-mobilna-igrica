@@ -25,6 +25,7 @@ unused_assets/
 # Android and Gradle caches
 .gradle/
 **/build/
+/android/.build_version
 .externalNativeBuild/
 .cxx/
 local.properties
@@ -67,6 +68,18 @@ desktop.ini
 /assets/Untitled.png.import
 /assets/intro-scene/*.png
 /assets/intro-scene/*.png.import
+
+# Superseded runtime sprites retained locally only as visual fallbacks
+/assets/sprites/launch_push_atlas_v1.png
+/assets/sprites/launch_push_atlas_v1.png.import
+/assets/sprites/sail_upgrade_triangle_v1.png
+/assets/sprites/sail_upgrade_triangle_v1.png.import
+/assets/sprites/shield_upgrade_v1.png
+/assets/sprites/shield_upgrade_v1.png.import
+/assets/upgrade-scene/wood-guard-workshop_optimized_v1.webp
+/assets/upgrade-scene/wood-guard-workshop_optimized_v1.webp.import
+/assets/upgrade-scene/wood-guard-workshop_optimized_v2.webp
+/assets/upgrade-scene/wood-guard-workshop_optimized_v2.webp.import
 
 # One-off local asset preparation helpers
 /scripts/optimize_upgrade_scene.gd

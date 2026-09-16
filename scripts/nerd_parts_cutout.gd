@@ -2,6 +2,9 @@ extends Node2D
 
 const LOOP_TIME := 5.80
 const WORK_LOOP := &"parts_work_loop"
+const UPGRADE_BUILD := &"upgrade_build"
+const UPGRADE_BUILD_DURATION := 3.0
+const UPGRADE_BUILD_HIT_COUNT := 7
 
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 
@@ -74,7 +77,48 @@ func build_animation() -> void:
 
 	var library := AnimationLibrary.new()
 	library.add_animation(WORK_LOOP, animation)
+	library.add_animation(UPGRADE_BUILD, build_upgrade_animation())
 	animation_player.add_animation_library(&"", library)
+
+
+func build_upgrade_animation() -> Animation:
+	var animation := Animation.new()
+	animation.resource_name = "Rapid upgrade build"
+	animation.length = UPGRADE_BUILD_DURATION
+	animation.loop_mode = Animation.LOOP_NONE
+
+	var hammer_keys: Array = [[0.0, 0.0]]
+	var body_keys: Array = [[0.0, Vector2.ONE]]
+	var head_position_keys: Array = [[0.0, Vector2(80.192, -58.762)]]
+	var head_rotation_keys: Array = [[0.0, 0.0]]
+	for hit_index in UPGRADE_BUILD_HIT_COUNT:
+		var impact_time := 0.30 + float(hit_index) * 0.40
+		hammer_keys.append([impact_time - 0.13, deg_to_rad(-12.0)])
+		hammer_keys.append([impact_time, deg_to_rad(96.0)])
+		hammer_keys.append([impact_time + 0.07, deg_to_rad(82.0)])
+		hammer_keys.append([impact_time + 0.16, 0.0])
+
+		body_keys.append([impact_time - 0.13, Vector2(0.997, 1.012)])
+		body_keys.append([impact_time, Vector2(1.012, 0.992)])
+		body_keys.append([impact_time + 0.16, Vector2.ONE])
+
+		head_position_keys.append([impact_time - 0.13, Vector2(80.192, -60.262)])
+		head_position_keys.append([impact_time, Vector2(80.892, -57.262)])
+		head_position_keys.append([impact_time + 0.16, Vector2(80.192, -58.762)])
+		head_rotation_keys.append([impact_time - 0.13, deg_to_rad(-0.8)])
+		head_rotation_keys.append([impact_time, deg_to_rad(1.8)])
+		head_rotation_keys.append([impact_time + 0.16, 0.0])
+
+	hammer_keys.append([UPGRADE_BUILD_DURATION, 0.0])
+	body_keys.append([UPGRADE_BUILD_DURATION, Vector2.ONE])
+	head_position_keys.append([UPGRADE_BUILD_DURATION, Vector2(80.192, -58.762)])
+	head_rotation_keys.append([UPGRADE_BUILD_DURATION, 0.0])
+
+	add_value_track(animation, NodePath("HammerPivot:rotation"), Animation.INTERPOLATION_LINEAR, hammer_keys)
+	add_value_track(animation, NodePath("BodyBreathPivot:scale"), Animation.INTERPOLATION_CUBIC, body_keys)
+	add_value_track(animation, NodePath("HeadPivot:position"), Animation.INTERPOLATION_CUBIC, head_position_keys)
+	add_value_track(animation, NodePath("HeadPivot:rotation"), Animation.INTERPOLATION_CUBIC, head_rotation_keys)
+	return animation
 
 
 func add_value_track(animation: Animation, path: NodePath, interpolation: int, keys: Array) -> void:
@@ -89,6 +133,16 @@ func add_value_track(animation: Animation, path: NodePath, interpolation: int, k
 func restart_animation() -> void:
 	animation_player.play(WORK_LOOP)
 	animation_player.seek(0.0, true)
+
+
+func play_upgrade_build() -> void:
+	animation_player.play(UPGRADE_BUILD)
+	animation_player.seek(0.0, true)
+
+
+func seek_upgrade_build(time_seconds: float) -> void:
+	animation_player.play(UPGRADE_BUILD)
+	animation_player.seek(clampf(time_seconds, 0.0, UPGRADE_BUILD_DURATION), true)
 
 
 func seek_preview(time_seconds: float) -> void:

@@ -11,6 +11,7 @@ shader_parameter/travel_pixels = 0.0
 shader_parameter/distortion_strength = 0.032
 shader_parameter/animation_speed = 0.42
 shader_parameter/tile_size_pixels = 322.0
+shader_parameter/distance_m = 0.0
 
 [node name="GameplayOcean" type="Node2D"]
 script = ExtResource("1_script")
