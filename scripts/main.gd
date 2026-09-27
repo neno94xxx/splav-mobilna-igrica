@@ -1,13 +1,14 @@
 extends Node2D
 
-enum State { HOME, CHARGING, INTRO, PLAYING, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING, RAFT_PREVIEW, FAT_RAFT_PREVIEW, SKINNY_RAFT_PREVIEW, FAT_RAFT2_PREVIEW, CAPTAIN_PREVIEW, ISLAND_ARRIVAL_PREVIEW, BEACH_PREVIEW }
+enum State { HOME, CHARGING, INTRO, PLAYING, DESTINATION_APPROACH, RETURNING, RESULTS, UPGRADES, VICTORY, OPENING, RAFT_PREVIEW, FAT_RAFT_PREVIEW, SKINNY_RAFT_PREVIEW, FAT_RAFT2_PREVIEW, CAPTAIN_PREVIEW, ISLAND_ARRIVAL_PREVIEW, BEACH_PREVIEW }
 
 const VIEW_SIZE := Vector2(720.0, 1280.0)
 const RAFT_Y := 1035.0
 const RAFT_GAMEPLAY_SCALE := 0.85
 const ROCK_GAMEPLAY_SCALE := 0.80
+const ROCK_SPAWN_MULTIPLIER := 1.20
 const SAVE_PATH := "user://save.cfg"
-const SAVE_VERSION := 1
+const SAVE_VERSION := 3
 const SPRITE_ATLAS: Texture2D = preload("res://assets/sprites/raft_escape_atlas_v1.png")
 const GAMEPLAY_RAFT_LVL1: Texture2D = preload("res://assets/sprites/raft-lvl1_optimized_v1.webp")
 const GAMEPLAY_SALVAGE_NET: Texture2D = preload("res://assets/sprites/salvage-net-gameplay_optimized_v1.webp")
@@ -82,11 +83,44 @@ const UPGRADE_PLANK_ICON: Texture2D = preload("res://assets/sprites/plank_collec
 const ROPE_SPRITE: Texture2D = preload("res://assets/sprites/rope_coil_optimized_v2.webp")
 const PLANK_SPRITE: Texture2D = preload("res://assets/sprites/plank_collectible_optimized_v2.webp")
 const SHARK_SPRITE: Texture2D = preload("res://assets/sprites/shark-top-down_optimized_v1.webp")
-const ESCAPE_DISTANCE := 1000.0
+const MUSIC_INTRO_PATH := "res://assets/sounds/Intro (complete).wav"
+const MUSIC_MENU_PATH := "res://assets/sounds/Main menu.wav"
+const MUSIC_SAILING_PATH := "res://assets/sounds/Main sailing theme (background music while sailing) - with wind and sea SFX.wav"
+const SFX_ESCAPE_PATH := "res://assets/sounds/End (You managed to escape).wav"
+const SFX_ROUND_END_PATH := "res://assets/sounds/Game over (end of the round).wav"
+const SFX_HIT_ROCK_PATH := "res://assets/sounds/Hitting the rock.wav"
+const SFX_RAISE_SAIL_PATH := "res://assets/sounds/Lifting the sail.wav"
+const SFX_PICKUP_PLANK_PATH := "res://assets/sounds/Picking up - plank.wav"
+const SFX_PICKUP_ROPE_PATH := "res://assets/sounds/Picking up - rope.wav"
+const SFX_RESULT_PLANK_PATH := "res://assets/sounds/Plank sound for every plank collected (Returning to the island window).wav"
+const SFX_PUSH_RAFT_PATH := "res://assets/sounds/Pushing the raft.wav"
+const SFX_RAFT_BREAK_PATH := "res://assets/sounds/Raft breaking off the rock (Game over).wav"
+const SFX_RESULT_ROPE_PATH := "res://assets/sounds/Rope sound for every rope collected (Returning to the island window).wav"
+const SFX_UPGRADE_PATH := "res://assets/sounds/Upgradeanje.wav"
+const SFX_HAMMER_HIT_PATH := "res://assets/sounds/Hammer hit.wav"
+const MUSIC_VOLUME_DB := -11.0
+const SAILING_MUSIC_VOLUME_DB := -5.0
+const MUSIC_FADE_FLOOR_DB := -45.0
+const MUSIC_FADE_SPEED_DB := 34.0
+const SFX_PLAYER_COUNT := 8
+const ROUND_END_AFTER_BREAK_DELAY := 0.75
+const ESCAPE_DISTANCE := 1600.0
+const DESTINATION_SLOWDOWN_DURATION := 2.4
+const DESTINATION_DOCK_DURATION := 3.2
+const DESTINATION_APPROACH_DURATION := DESTINATION_SLOWDOWN_DURATION + DESTINATION_DOCK_DURATION
+const DESTINATION_COAST_SPEED := 82.0
+const DESTINATION_ISLAND_REVEAL_DURATION := 1.15
+const DESTINATION_RAFT_TARGET_Y := 410.0
+const DESTINATION_ISLAND_CENTER := Vector2(360.0, -550.0)
+const DESTINATION_ISLAND_SIZE := 2100.0
 const PUSH_ONLY_MAX_DISTANCE := 150.0
-const SAIL_RANGE_BY_LEVEL := [75.0, 135.0, 210.0, 300.0, 410.0, 535.0, 670.0, 800.0, 910.0, 1000.0]
+const SAIL_RANGE_BY_LEVEL := [75.0, 170.0, 240.0, 325.0, 475.0, 610.0, 760.0, 1000.0, 1200.0, 1600.0]
+const SAIL_DURATION_BY_LEVEL := [0.0, 8.2, 11.0, 14.1, 18.1, 22.0, 26.0, 30.0, 34.0, 37.25]
+const SAIL_SPEED_BOOST_BY_LEVEL := [0.0, 120.0, 165.0, 215.0, 330.0, 380.0, 435.0, 580.0, 640.0, 900.0]
 const SAIL_MAX_LEVEL := 9
 const PROTECTION_MAX_LEVEL := 9
+const FREESTYLE_SAIL_SPEED_GAIN := 15.0
+const FREESTYLE_SAIL_DURATION_GAIN := 5.0
 const OAR_MAX_LEVEL := 9
 const NET_MAX_LEVEL := 9
 const NET_PULL_RADIUS_BONUS_PERCENT := 10
@@ -103,7 +137,7 @@ const SHARK_START_DISTANCE := 500.0
 const SHARK_SPAWN_MIN_TIME := 4.5
 const SHARK_SPAWN_MAX_TIME := 8.0
 const SHARK_MAX_ON_SCREEN := 2
-const LAUNCH_FULL_TIME := 2.60
+const LAUNCH_FULL_TIME := 2.08
 const LAUNCH_EXPONENT := 3.0
 const LAUNCH_YELLOW_POINT := 0.45
 const LAUNCH_GREEN_START := 0.70
@@ -117,9 +151,13 @@ const INTRO_FAILED_JUMP_TIME := 0.28
 const INTRO_SETTLE_TIME := 0.72
 const SAIL_RAISE_DURATION := 0.95
 const SAIL_POWER_MIN_DURATION := 3.0
-const SAIL_SPEED_BOOST_BASE := 210.0
-const SAIL_SPEED_BOOST_PER_LEVEL := 24.0
-const LEGACY_LEVEL_7_SAIL_BOOST := 354.0
+const MIN_PUSH_SPEED := 145.0
+const MAX_PUSH_SPEED := 500.0
+const PUSH_SPEED_CAP_POWER := 0.70
+const SAIL_MIN_CATCH_SPEED_RATIO := 0.55
+const IMPACT_SPEED_RECOVERY_DURATION := 3.0
+const SHARK_SPEED_LOSS := 0.30
+const SHARK_CARGO_LOSS := 5
 const SAIL_BOOST_ACCELERATION := 420.0
 const SAIL_EXHAUST_DECELERATION := 175.0
 const SAIL_COLLAPSE_DURATION := 0.55
@@ -264,6 +302,14 @@ const UPGRADE_DIALOGUES := [
 		{"speaker": "fat", "text": "I'm hungrier now."},
 	],
 ]
+const VOYAGE_DIALOGUE_MILESTONES := [
+	{"distance": 1000.0, "speaker": "fat", "text": "I see land!"},
+	{"distance": 1125.0, "speaker": "nerd", "text": "It isn't far now!"},
+	{"distance": 1240.0, "speaker": "fat", "text": "We're actually going to make it!"},
+	{"distance": 1300.0, "speaker": "fat", "text": "Oh... I thought we'd be there by now."},
+	{"distance": 1410.0, "speaker": "nerd", "text": "It's so close!"},
+	{"distance": 1510.0, "speaker": "fat", "text": "Only a little bit farther!"},
+]
 const OPENING_BEACH_PREVIEW_ONLY := false
 const OPENING_ISLAND_ARRIVAL_PREVIEW_ONLY := false
 const OPENING_CAPTAIN_PREVIEW_ONLY := false
@@ -275,7 +321,7 @@ const OPENING_FAT_RAFT2_PREVIEW_ONLY := false
 const UPGRADE_SCREEN_TEST_MODE := false
 const GAMEPLAY_ZERO_PROGRESS_TEST_MODE := false
 const GAMEPLAY_SAIL_LEVEL_4_TEST_MODE := false
-const TEMP_TEST_RESOURCES_ENABLED := true
+const TEMP_TEST_RESOURCES_ENABLED := false
 const TEMP_TEST_RESOURCE_AMOUNT := 1000
 const OPENING_PLANK_LAYOUT := [
 	{"position": Vector2(78.0, 338.0), "size": 154.0, "rotation": -0.22},
@@ -347,6 +393,7 @@ var sail_raise_time := 0.0
 var sail_power_active := false
 var sail_power_time := 0.0
 var sail_power_duration := 0.0
+var sail_activation_base_speed := 0.0
 var sail_exhausted := false
 var sail_slowdown_active := false
 var sail_exhaust_time := 0.0
@@ -389,6 +436,12 @@ var launch_is_perfect := false
 var run_target_distance := 75.0
 var launch_cruise_speed := 500.0
 var raft_forward_speed := 500.0
+var impact_speed_recovery_active := false
+var impact_speed_recovery_time := 0.0
+var impact_speed_recovery_from := 0.0
+var impact_speed_recovery_target := 0.0
+var destination_raft_start_position := Vector2(VIEW_SIZE.x * 0.5, RAFT_Y)
+var destination_start_speed := 0.0
 var intro_raft_speed := 0.0
 var intro_push_peak_speed := 500.0
 var launch_feedback := ""
@@ -414,6 +467,25 @@ var launch_dialogue_line_time := 0.0
 var launch_dialogue_wait_remaining := LAUNCH_DIALOGUE_FIRST_DELAY
 var launch_dialogue_active := false
 var opening_seen := false
+var campaign_completed := false
+var freestyle_mode := false
+var freestyle_prompt_declined := false
+var freestyle_explanation_open := false
+var reset_game_confirmation_open := false
+var voyage_dialogue_milestone_index := 0
+var voyage_dialogue_queue: Array[Dictionary] = []
+var voyage_dialogue_speaker := ""
+var voyage_dialogue_text := ""
+var voyage_dialogue_time := 0.0
+var voyage_dialogue_duration := 0.0
+var music_player: AudioStreamPlayer
+var music_current_path := ""
+var music_requested_path := ""
+var music_requested_loop := false
+var sfx_players: Array[AudioStreamPlayer] = []
+var sfx_cache: Dictionary = {}
+var next_sfx_player := 0
+var pending_round_end_sound_delay := -1.0
 var result_rope_to_launch := 0
 var result_planks_to_launch := 0
 var result_display_rope := 0
@@ -441,6 +513,7 @@ var workshop_animation_time_override := -1.0
 var obstacles: Array[Dictionary] = []
 var pickups: Array[Dictionary] = []
 var particles: Array[Dictionary] = []
+var dropped_cargo: Array[Dictionary] = []
 var result_flyers: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
 
@@ -452,15 +525,154 @@ var sail_upgrade_button := Rect2(563, 219, 129, 34)
 var protection_upgrade_button := Rect2(563, 320, 129, 34)
 var oar_upgrade_button := Rect2(563, 421, 129, 34)
 var net_upgrade_button := Rect2(563, 522, 129, 34)
-var sail_info_button := Rect2(654, 180, 38, 38)
-var protection_info_button := Rect2(654, 281, 38, 38)
-var oar_info_button := Rect2(654, 382, 38, 38)
-var net_info_button := Rect2(654, 483, 38, 38)
+# Keep the visible badge compact, but make its invisible touch target large
+# enough to tap reliably on a phone.
+var sail_info_button := Rect2(647, 173, 52, 52)
+var protection_info_button := Rect2(647, 274, 52, 52)
+var oar_info_button := Rect2(647, 375, 52, 52)
+var net_info_button := Rect2(647, 476, 52, 52)
 var reset_upgrades_button := Rect2(315, 852, 184, 56)
 var replay_intro_button := Rect2(507, 852, 193, 56)
 var upgrade_back_button := Rect2(370, 930, 300, 66)
 var raise_sail_button := Rect2(470, 218, 225, 62)
-var victory_button := Rect2(120, 1100, 480, 88)
+var victory_button := Rect2(100, 895, 520, 78)
+var victory_decline_button := Rect2(100, 990, 520, 68)
+var victory_reset_button := Rect2(100, 1080, 520, 68)
+var reset_game_confirm_button := Rect2(105, 688, 510, 76)
+var reset_game_cancel_button := Rect2(105, 786, 510, 70)
+var freestyle_start_button := Rect2(105, 785, 510, 76)
+var freestyle_explanation_back_button := Rect2(105, 880, 510, 68)
+
+
+func setup_audio() -> void:
+	if "--smoke-test" in OS.get_cmdline_user_args():
+		return
+	music_player = AudioStreamPlayer.new()
+	music_player.name = "MusicPlayer"
+	music_player.volume_db = MUSIC_FADE_FLOOR_DB
+	add_child(music_player)
+	for index in SFX_PLAYER_COUNT:
+		var player := AudioStreamPlayer.new()
+		player.name = "SfxPlayer%d" % index
+		add_child(player)
+		sfx_players.append(player)
+	music_requested_path = music_path_for_state(state)
+	music_requested_loop = music_should_loop_for_state(state)
+	start_requested_music()
+
+
+func music_path_for_state(current_state: int) -> String:
+	match current_state:
+		State.OPENING, State.RAFT_PREVIEW, State.FAT_RAFT_PREVIEW, State.SKINNY_RAFT_PREVIEW, State.FAT_RAFT2_PREVIEW, State.CAPTAIN_PREVIEW, State.ISLAND_ARRIVAL_PREVIEW, State.BEACH_PREVIEW:
+			return MUSIC_INTRO_PATH
+		State.UPGRADES, State.HOME, State.CHARGING:
+			return MUSIC_MENU_PATH
+		State.INTRO, State.PLAYING, State.DESTINATION_APPROACH:
+			return MUSIC_SAILING_PATH
+	return ""
+
+
+func music_should_loop_for_state(current_state: int) -> bool:
+	return current_state in [State.UPGRADES, State.HOME, State.CHARGING, State.INTRO, State.PLAYING, State.DESTINATION_APPROACH]
+
+
+func music_volume_for_state(current_state: int) -> float:
+	if current_state in [State.INTRO, State.PLAYING, State.DESTINATION_APPROACH]:
+		return SAILING_MUSIC_VOLUME_DB
+	return MUSIC_VOLUME_DB
+
+
+func update_audio(delta: float) -> void:
+	if not is_instance_valid(music_player):
+		return
+	var desired_path := music_path_for_state(state)
+	var desired_loop := music_should_loop_for_state(state)
+	if desired_path != music_requested_path or desired_loop != music_requested_loop:
+		music_requested_path = desired_path
+		music_requested_loop = desired_loop
+
+	if music_current_path != music_requested_path:
+		if music_player.playing and music_player.volume_db > MUSIC_FADE_FLOOR_DB + 0.5:
+			music_player.volume_db = move_toward(music_player.volume_db, MUSIC_FADE_FLOOR_DB, MUSIC_FADE_SPEED_DB * delta)
+			return
+		music_player.stop()
+		music_player.stream = null
+		music_current_path = ""
+		start_requested_music()
+	elif not music_current_path.is_empty() and music_player.playing:
+		music_player.volume_db = move_toward(music_player.volume_db, music_volume_for_state(state), MUSIC_FADE_SPEED_DB * delta)
+
+
+func start_music_immediately_for_state() -> void:
+	if not is_instance_valid(music_player):
+		return
+	music_requested_path = music_path_for_state(state)
+	music_requested_loop = music_should_loop_for_state(state)
+	if music_current_path != music_requested_path or not music_player.playing:
+		music_player.stop()
+		music_player.stream = null
+		music_current_path = ""
+		start_requested_music()
+	music_player.volume_db = music_volume_for_state(state)
+
+
+func start_requested_music() -> void:
+	if not is_instance_valid(music_player) or music_requested_path.is_empty():
+		return
+	var loaded_stream := load(music_requested_path) as AudioStream
+	if loaded_stream == null:
+		push_warning("Could not load music: %s" % music_requested_path)
+		return
+	var stream := loaded_stream.duplicate() as AudioStream
+	if stream is AudioStreamWAV:
+		var wav_stream := stream as AudioStreamWAV
+		if music_requested_loop:
+			wav_stream.loop_begin = 0
+			wav_stream.loop_end = maxi(1, int(round(wav_stream.get_length() * float(wav_stream.mix_rate))))
+			wav_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		else:
+			wav_stream.loop_mode = AudioStreamWAV.LOOP_DISABLED
+	elif stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = music_requested_loop
+	music_player.stream = stream
+	music_player.volume_db = MUSIC_FADE_FLOOR_DB
+	music_player.play()
+	music_current_path = music_requested_path
+
+
+func play_sfx(path: String, volume_db: float = -3.0, pitch_variation: float = 0.0) -> void:
+	if sfx_players.is_empty():
+		return
+	var stream: AudioStream = sfx_cache.get(path) as AudioStream
+	if stream == null:
+		stream = load(path) as AudioStream
+		if stream == null:
+			push_warning("Could not load sound effect: %s" % path)
+			return
+		sfx_cache[path] = stream
+	var selected_index := -1
+	for index in sfx_players.size():
+		if not sfx_players[index].playing:
+			selected_index = index
+			break
+	if selected_index < 0:
+		selected_index = next_sfx_player
+	next_sfx_player = (selected_index + 1) % sfx_players.size()
+	var player := sfx_players[selected_index]
+	player.stop()
+	player.stream = stream
+	player.volume_db = volume_db
+	player.pitch_scale = rng.randf_range(1.0 - pitch_variation, 1.0 + pitch_variation)
+	player.play()
+
+
+func update_scheduled_audio(delta: float) -> void:
+	if pending_round_end_sound_delay < 0.0:
+		return
+	pending_round_end_sound_delay -= delta
+	if pending_round_end_sound_delay <= 0.0:
+		pending_round_end_sound_delay = -1.0
+		play_sfx(SFX_ROUND_END_PATH, -1.0)
 
 
 func _ready() -> void:
@@ -515,7 +727,10 @@ func _ready() -> void:
 		state = State.FAT_RAFT2_PREVIEW
 		state_time = 0.0
 	else:
-		if opening_seen:
+		if campaign_completed and not freestyle_mode:
+			state = State.VICTORY
+			state_time = 0.0
+		elif opening_seen:
 			open_upgrade_screen(true)
 		else:
 			start_opening_sequence(true)
@@ -607,6 +822,15 @@ func _ready() -> void:
 		launch_dialogue_active = false
 		launch_dialogue_wait_remaining = 99.0
 		capture_filename = "home.png"
+		capture_requested = true
+	elif "--capture-charge-overpush" in user_args:
+		return_to_launch_screen()
+		state = State.CHARGING
+		launch_charge = 0.93
+		state_time = log(1.0 + launch_charge * (exp(LAUNCH_EXPONENT) - 1.0)) / LAUNCH_EXPONENT * LAUNCH_FULL_TIME
+		launch_dialogue_active = false
+		launch_dialogue_wait_remaining = 99.0
+		capture_filename = "charge_overpush.png"
 		capture_requested = true
 	elif "--capture-sail-lvl7-raised" in user_args:
 		sail_level = 7
@@ -788,8 +1012,13 @@ func _ready() -> void:
 		state = State.UPGRADES
 		total_rope = maxi(total_rope, 25)
 		total_planks = maxi(total_planks, 8)
-		upgrade_info_open = 3 if "--capture-net-info" in user_args else 0
-		capture_filename = "upgrades_net_info.png" if upgrade_info_open == 3 else "upgrades_info.png"
+		if "--capture-guard-info" in user_args:
+			upgrade_info_open = 1
+		elif "--capture-net-info" in user_args:
+			upgrade_info_open = 3
+		else:
+			upgrade_info_open = 0
+		capture_filename = "upgrades_guard_info.png" if upgrade_info_open == 1 else ("upgrades_net_info.png" if upgrade_info_open == 3 else "upgrades_info.png")
 		capture_requested = true
 	elif "--capture-upgrades-water-late" in user_args:
 		state = State.UPGRADES
@@ -854,6 +1083,15 @@ func _ready() -> void:
 		intro_time = intro_action_end + 0.40
 		capture_filename = "launch_overcharge.png"
 		capture_requested = true
+	elif "--capture-destination-approach" in user_args:
+		state = State.PLAYING
+		distance_m = ESCAPE_DISTANCE
+		world_scroll = 26000.0
+		raft_x = VIEW_SIZE.x * 0.5
+		begin_destination_approach()
+		state_time = DESTINATION_APPROACH_DURATION * 0.72
+		capture_filename = "destination_approach.png"
+		capture_requested = true
 	elif "--capture-victory" in user_args:
 		state = State.VICTORY
 		state_time = 1.5
@@ -863,6 +1101,7 @@ func _ready() -> void:
 		touch_steering_active = true
 		joystick_target_axis = 0.82
 		joystick_visual_axis = 0.82
+	setup_audio()
 	update_workshop_background()
 	queue_redraw()
 
@@ -877,6 +1116,8 @@ func _process(delta: float) -> void:
 	if state != State.PLAYING:
 		raft_steer_visual = move_toward(raft_steer_visual, 0.0, delta * 5.0)
 	update_particles(delta)
+	update_dropped_cargo(delta)
+	update_scheduled_audio(delta)
 
 	match state:
 		State.HOME:
@@ -891,6 +1132,8 @@ func _process(delta: float) -> void:
 			update_intro(delta)
 		State.PLAYING:
 			update_playing(delta)
+		State.DESTINATION_APPROACH:
+			update_destination_approach(delta)
 		State.RETURNING:
 			update_returning(delta)
 		State.RESULTS:
@@ -904,6 +1147,7 @@ func _process(delta: float) -> void:
 				update_upgrade_dialogues(delta)
 		State.VICTORY:
 			world_scroll += 150.0 * delta
+	update_audio(delta)
 	update_gameplay_ocean()
 
 	if capture_requested:
@@ -937,7 +1181,7 @@ func update_gameplay_ocean() -> void:
 		)
 		return
 	var ocean_scroll := 0.0 if state == State.HOME or state == State.CHARGING else world_scroll
-	var ocean_distance := distance_m if state in [State.INTRO, State.PLAYING, State.RETURNING, State.RESULTS] else 0.0
+	var ocean_distance := distance_m if state in [State.INTRO, State.PLAYING, State.DESTINATION_APPROACH, State.RETURNING, State.RESULTS] else 0.0
 	if state in [State.RETURNING, State.RESULTS] and return_scene_visible:
 		ocean_distance *= clampf(world_scroll / maxf(return_start_scroll, 1.0), 0.0, 1.0)
 	gameplay_ocean.call("set_travel", ocean_scroll, 0.0, 322.0, ocean_distance)
@@ -963,6 +1207,7 @@ func setup_workshop_background() -> void:
 	workshop_character_rig.show_behind_parent = true
 	workshop_character_rig.z_index = -90
 	add_child(workshop_character_rig)
+	workshop_character_rig.connect("normal_hammer_hit", Callable(self, "on_normal_workshop_hammer_hit"))
 
 	workshop_fat_man_rig = FAT_MAN_PARTS_CUTOUT_SCENE.instantiate() as Node2D
 	workshop_fat_man_rig.name = "FatManPartsCutoutPreview"
@@ -1028,6 +1273,11 @@ func setup_workshop_background() -> void:
 	add_child(workshop_oarlock_preview)
 
 
+func on_normal_workshop_hammer_hit() -> void:
+	if state == State.UPGRADES and not upgrade_build_active:
+		play_sfx(SFX_HAMMER_HIT_PATH, -5.0, 0.045)
+
+
 func update_workshop_background() -> void:
 	if not is_instance_valid(workshop_preview_background) or not is_instance_valid(workshop_branches_rig) or not is_instance_valid(workshop_raft_preview) or not is_instance_valid(workshop_folded_sail_preview) or not is_instance_valid(workshop_net_preview) or not is_instance_valid(workshop_guard_preview) or not is_instance_valid(workshop_guard_level4_preview) or not is_instance_valid(workshop_oarlock_preview) or not is_instance_valid(workshop_character_rig) or not is_instance_valid(workshop_fat_man_rig):
 		return
@@ -1081,9 +1331,10 @@ func update_playing(delta: float) -> void:
 	update_sail_raise_animation(delta)
 	update_sail_power(delta)
 	var speed := advance_world(delta)
-	if distance_m >= ESCAPE_DISTANCE:
+	update_voyage_dialogues(delta)
+	if not freestyle_mode and distance_m >= ESCAPE_DISTANCE:
 		distance_m = ESCAPE_DISTANCE
-		begin_victory()
+		begin_destination_approach()
 		return
 	if sail_slowdown_active and raft_forward_speed <= 3.0:
 		begin_return("THE WIND HAS DIED DOWN")
@@ -1145,15 +1396,101 @@ func update_playing(delta: float) -> void:
 		return
 	update_salvage_net(delta)
 
-	if distance_m >= run_target_distance:
+	var freestyle_sail_in_use := freestyle_mode and (sail_raise_active or sail_raised)
+	if distance_m >= run_target_distance and not freestyle_sail_in_use:
+		# Let an already-started raising animation finish. If the raft has slowed
+		# too much by then, start_sail_power() rejects the wind catch and return
+		# begins normally; otherwise the sail receives its full fixed duration.
+		if sail_raise_active:
+			return
 		distance_m = run_target_distance
 		if sail_power_active:
 			sail_power_active = false
+			impact_speed_recovery_active = false
 			sail_exhausted = true
 			sail_slowdown_active = true
 			sail_exhaust_time = 0.0
 		elif not sail_slowdown_active:
 			begin_return("THE CURRENT IS TOO STRONG")
+
+
+func reset_voyage_dialogues() -> void:
+	voyage_dialogue_milestone_index = 0
+	voyage_dialogue_queue.clear()
+	voyage_dialogue_speaker = ""
+	voyage_dialogue_text = ""
+	voyage_dialogue_time = 0.0
+	voyage_dialogue_duration = 0.0
+
+
+func update_voyage_dialogues(delta: float) -> void:
+	if not freestyle_mode and state == State.PLAYING:
+		while voyage_dialogue_milestone_index < VOYAGE_DIALOGUE_MILESTONES.size():
+			var milestone: Dictionary = VOYAGE_DIALOGUE_MILESTONES[voyage_dialogue_milestone_index]
+			if distance_m < float(milestone["distance"]):
+				break
+			voyage_dialogue_queue.append(milestone)
+			voyage_dialogue_milestone_index += 1
+
+	if not voyage_dialogue_text.is_empty():
+		voyage_dialogue_time += delta
+		if voyage_dialogue_time >= voyage_dialogue_duration:
+			voyage_dialogue_speaker = ""
+			voyage_dialogue_text = ""
+			voyage_dialogue_time = 0.0
+			voyage_dialogue_duration = 0.0
+
+	if voyage_dialogue_text.is_empty() and not voyage_dialogue_queue.is_empty():
+		var next_line: Dictionary = voyage_dialogue_queue.pop_front()
+		voyage_dialogue_speaker = str(next_line["speaker"])
+		voyage_dialogue_text = str(next_line["text"])
+		voyage_dialogue_time = 0.0
+		voyage_dialogue_duration = clampf(2.1 + float(voyage_dialogue_text.length()) * 0.026, 2.4, 3.2)
+
+
+func begin_destination_approach() -> void:
+	if state != State.PLAYING:
+		return
+	state = State.DESTINATION_APPROACH
+	state_time = 0.0
+	distance_m = ESCAPE_DISTANCE
+	destination_raft_start_position = Vector2(raft_x, RAFT_Y)
+	destination_start_speed = maxf(raft_forward_speed, DESTINATION_COAST_SPEED)
+	sail_power_active = false
+	impact_speed_recovery_active = false
+	reset_salvage_net_animation()
+	reset_touch_joystick()
+	obstacles.clear()
+	pickups.clear()
+	sharks.clear()
+	dropped_cargo.clear()
+	pointer_active = false
+
+
+func update_destination_approach(delta: float) -> void:
+	update_voyage_dialogues(delta)
+	if state_time < DESTINATION_SLOWDOWN_DURATION:
+		var slowdown_progress := smoothstep(0.0, 1.0, state_time / DESTINATION_SLOWDOWN_DURATION)
+		raft_forward_speed = lerpf(destination_start_speed, DESTINATION_COAST_SPEED, slowdown_progress)
+		# The camera remains locked to the raft while the ocean coasts beneath it.
+		world_scroll += raft_forward_speed * delta
+		return
+	raft_forward_speed = DESTINATION_COAST_SPEED
+	if state_time >= DESTINATION_APPROACH_DURATION:
+		begin_victory()
+
+
+func destination_raft_position() -> Vector2:
+	if state_time <= DESTINATION_SLOWDOWN_DURATION:
+		return destination_raft_start_position + Vector2(0.0, sin(state_time * 3.2) * 1.5)
+	var docking_time := state_time - DESTINATION_SLOWDOWN_DURATION
+	var progress := clampf(docking_time / DESTINATION_DOCK_DURATION, 0.0, 1.0)
+	var travel_progress := smoothstep(0.0, 1.0, progress)
+	var target_position := Vector2(destination_raft_start_position.x, DESTINATION_RAFT_TARGET_Y)
+	var position := destination_raft_start_position.lerp(target_position, travel_progress)
+	position.x += sin(progress * PI) * 9.0
+	position.y += sin(progress * PI * 5.0) * 2.0
+	return position
 
 
 func update_sail_raise_animation(delta: float) -> void:
@@ -1167,42 +1504,52 @@ func update_sail_raise_animation(delta: float) -> void:
 
 
 func current_sail_power_duration() -> float:
-	var distance_rate := lerpf(6.2, 15.5, pow(clampf(launch_power, 0.0, 1.0), 0.72)) * 1.35
-	var remaining_distance := maxf(0.0, current_max_distance() - distance_m)
-	return maxf(SAIL_POWER_MIN_DURATION, remaining_distance / maxf(distance_rate, 0.01))
+	var campaign_duration := float(SAIL_DURATION_BY_LEVEL[clampi(sail_level, 0, SAIL_MAX_LEVEL)])
+	var freestyle_bonus := float(maxi(sail_level - SAIL_MAX_LEVEL, 0)) * FREESTYLE_SAIL_DURATION_GAIN
+	return maxf(SAIL_POWER_MIN_DURATION, campaign_duration + freestyle_bonus)
 
 
 func current_sail_speed_boost() -> float:
 	return sail_speed_boost_for_level(sail_level, launch_cruise_speed)
 
 
-func sail_speed_boost_for_level(level: int, cruise_speed: float) -> float:
-	match clampi(level, 0, SAIL_MAX_LEVEL):
-		0: return 0.0
-		1: return SAIL_SPEED_BOOST_BASE
-		2: return SAIL_SPEED_BOOST_BASE + SAIL_SPEED_BOOST_PER_LEVEL
-		3: return 258.0
-		# The larger level-4 sail creates the first clearly noticeable jump.
-		4: return 340.0
-		5: return 375.0
-		6: return 410.0
-		# Level 7 catches substantially more wind than level 6.
-		7: return (cruise_speed + LEGACY_LEVEL_7_SAIL_BOOST) * 1.15 - cruise_speed
-		8: return (cruise_speed + LEGACY_LEVEL_7_SAIL_BOOST) * 1.55 - cruise_speed
-		# Level 9 travels at twice the powered speed of the previous level-7 balance.
-		9: return (cruise_speed + LEGACY_LEVEL_7_SAIL_BOOST) * 2.0 - cruise_speed
-	return 0.0
+func current_sail_powered_speed() -> float:
+	return sail_activation_base_speed + current_sail_speed_boost()
+
+
+func sail_speed_boost_for_level(level: int, _cruise_speed: float) -> float:
+	# Boosts are fixed so a capped 500-unit push reaches exactly 1400 at level 9.
+	# The larger jumps at levels 4, 7 and 9 mark the three visual sail tiers.
+	var campaign_boost := float(SAIL_SPEED_BOOST_BY_LEVEL[clampi(level, 0, SAIL_MAX_LEVEL)])
+	var freestyle_bonus := float(maxi(level - SAIL_MAX_LEVEL, 0)) * FREESTYLE_SAIL_SPEED_GAIN
+	return campaign_boost + freestyle_bonus
+
+
+func sail_can_catch_wind() -> bool:
+	var minimum_speed := maxf(MIN_PUSH_SPEED * 0.45, launch_cruise_speed * SAIL_MIN_CATCH_SPEED_RATIO)
+	return raft_forward_speed >= minimum_speed
 
 
 func start_sail_power() -> void:
 	if sail_level <= 0 or sail_exhausted:
 		return
+	if not sail_can_catch_wind():
+		sail_power_active = false
+		sail_exhausted = true
+		sail_slowdown_active = true
+		sail_exhaust_time = 0.0
+		impact_speed_recovery_active = false
+		return
 	sail_power_duration = current_sail_power_duration()
 	sail_power_time = 0.0
+	sail_activation_base_speed = raft_forward_speed
 	sail_power_active = true
 	sail_slowdown_active = false
 	sail_exhaust_time = 0.0
-	run_target_distance = current_max_distance()
+	# Once the sail catches wind, the remaining push range no longer cuts it
+	# short. Its fixed boost lasts for the full duration of this sail level.
+	if not freestyle_mode:
+		run_target_distance = ESCAPE_DISTANCE
 
 
 func update_sail_power(delta: float) -> void:
@@ -1210,6 +1557,7 @@ func update_sail_power(delta: float) -> void:
 		sail_power_time = minf(sail_power_time + delta, sail_power_duration)
 		if sail_power_time >= sail_power_duration:
 			sail_power_active = false
+			impact_speed_recovery_active = false
 			sail_exhausted = true
 			sail_slowdown_active = true
 			sail_exhaust_time = 0.0
@@ -1235,13 +1583,22 @@ func start_raising_sail() -> void:
 	sail_raise_active = true
 	sail_raise_time = 0.0
 	reset_touch_joystick()
+	play_sfx(SFX_RAISE_SAIL_PATH, -2.0)
 
 
 func advance_world(delta: float) -> float:
 	var limit_slowdown := 0.0
 	if sail_power_active:
-		var powered_speed := launch_cruise_speed + current_sail_speed_boost()
-		raft_forward_speed = move_toward(raft_forward_speed, powered_speed, SAIL_BOOST_ACCELERATION * delta)
+		var powered_speed := current_sail_powered_speed()
+		if impact_speed_recovery_active:
+			impact_speed_recovery_time = minf(impact_speed_recovery_time + delta, IMPACT_SPEED_RECOVERY_DURATION)
+			var recovery_ratio := smoothstep(0.0, 1.0, impact_speed_recovery_time / IMPACT_SPEED_RECOVERY_DURATION)
+			raft_forward_speed = lerpf(impact_speed_recovery_from, impact_speed_recovery_target, recovery_ratio)
+			if impact_speed_recovery_time >= IMPACT_SPEED_RECOVERY_DURATION:
+				impact_speed_recovery_active = false
+				raft_forward_speed = impact_speed_recovery_target
+		else:
+			raft_forward_speed = move_toward(raft_forward_speed, powered_speed, SAIL_BOOST_ACCELERATION * delta)
 	elif sail_slowdown_active:
 		raft_forward_speed = move_toward(raft_forward_speed, 0.0, SAIL_EXHAUST_DECELERATION * delta)
 	else:
@@ -1253,7 +1610,9 @@ func advance_world(delta: float) -> float:
 	world_scroll += speed * delta
 	var distance_rate := lerpf(6.2, 15.5, pow(clampf(launch_power, 0.0, 1.0), 0.72))
 	if sail_power_active:
-		distance_rate *= 1.35
+		# Travelled metres now follow the actual visual raft speed. Both a faster
+		# sail and its longer powered duration therefore contribute to range.
+		distance_rate *= clampf(raft_forward_speed / MAX_PUSH_SPEED, 0.20, 2.80)
 	elif sail_slowdown_active:
 		distance_rate *= clampf(raft_forward_speed / maxf(launch_cruise_speed, 1.0), 0.0, 1.0)
 	else:
@@ -1297,8 +1656,9 @@ func shift_returning_world_objects(scroll_delta: float, delta: float) -> void:
 
 func spawn_object() -> void:
 	var position := Vector2(rng.randf_range(100.0, VIEW_SIZE.x - 100.0), -70.0)
-	var difficulty := clampf(distance_m / run_target_distance, 0.0, 1.0)
-	var obstacle_chance := 0.24 + difficulty * 0.18
+	var difficulty_distance := ESCAPE_DISTANCE if freestyle_mode else maxf(run_target_distance, 1.0)
+	var difficulty := clampf(distance_m / difficulty_distance, 0.0, 1.0)
+	var obstacle_chance := clampf((0.24 + difficulty * 0.18) * ROCK_SPAWN_MULTIPLIER, 0.0, 0.72)
 	var spawn_obstacle := rng.randf() < obstacle_chance and spawns_since_pickup < 2
 	if spawn_obstacle:
 		spawns_since_pickup += 1
@@ -1344,7 +1704,7 @@ func update_sharks(delta: float, world_speed: float) -> void:
 		var position: Vector2 = shark["position"]
 		# Sharks are anchored to the same scrolling world as rocks and salvage.
 		# Their own movement is horizontal; forward travel moves them down-screen.
-		var horizontal_speed := float(shark["speed"]) + world_speed * 0.75
+		var horizontal_speed := (float(shark["speed"]) + world_speed * 0.75) * 0.50
 		position.x += float(shark["direction"]) * horizontal_speed * delta
 		position.y += world_speed * delta
 		shark["position"] = position
@@ -1355,7 +1715,7 @@ func update_sharks(delta: float, world_speed: float) -> void:
 		var collision_radius := 52.0 + 48.0 * float(shark["scale"])
 		if position.distance_to(Vector2(raft_x, RAFT_Y)) < collision_radius:
 			sharks.remove_at(index)
-			hit_obstacle("A SHARK BROKE THE RAFT")
+			hit_obstacle("A SHARK BROKE THE RAFT", true)
 			if state != State.PLAYING:
 				return
 
@@ -1373,12 +1733,69 @@ func spawn_shark() -> void:
 	})
 
 
-func hit_obstacle(break_reason: String = "THE RAFT BROKE") -> void:
+func rock_speed_loss_for_guard() -> float:
+	if protection_level >= 9:
+		return 0.0
+	if protection_level >= 7:
+		return 0.20
+	if protection_level >= 4:
+		return 0.30
+	return 0.50
+
+
+func apply_impact_speed_loss(speed_loss: float) -> void:
+	if speed_loss <= 0.0:
+		return
+	raft_forward_speed *= 1.0 - clampf(speed_loss, 0.0, 1.0)
+	if sail_power_active:
+		impact_speed_recovery_active = true
+		impact_speed_recovery_time = 0.0
+		impact_speed_recovery_from = raft_forward_speed
+		impact_speed_recovery_target = current_sail_powered_speed()
+	else:
+		impact_speed_recovery_active = false
+
+
+func drop_cargo_after_shark(amount: int) -> void:
+	var cargo_to_drop := mini(amount, run_rope + run_planks)
+	var next_kind := "rope" if run_rope >= run_planks else "plank"
+	for cargo_index in cargo_to_drop:
+		var kind := next_kind
+		if kind == "rope" and run_rope <= 0:
+			kind = "plank"
+		elif kind == "plank" and run_planks <= 0:
+			kind = "rope"
+		if kind == "rope":
+			run_rope -= 1
+			next_kind = "plank"
+		else:
+			run_planks -= 1
+			next_kind = "rope"
+		var lifetime := rng.randf_range(1.75, 2.35)
+		dropped_cargo.append({
+			"kind": kind,
+			"position": Vector2(raft_x, RAFT_Y - 8.0) + Vector2(rng.randf_range(-24.0, 24.0), rng.randf_range(-18.0, 18.0)),
+			"velocity": Vector2(rng.randf_range(-245.0, 245.0), rng.randf_range(-285.0, -165.0)),
+			"rotation": rng.randf_range(-0.45, 0.45),
+			"spin": rng.randf_range(-4.2, 4.2),
+			"life": lifetime,
+			"max_life": lifetime,
+		})
+
+
+func hit_obstacle(break_reason: String = "THE RAFT BROKE", is_shark: bool = false) -> void:
 	raft_health -= 1
 	hit_flash = 0.32
+	if is_shark:
+		drop_cargo_after_shark(SHARK_CARGO_LOSS)
+	if raft_health > 0:
+		apply_impact_speed_loss(SHARK_SPEED_LOSS if is_shark else rock_speed_loss_for_guard())
 	burst(Vector2(raft_x, RAFT_Y), COLOR_CORAL, 18)
 	if raft_health <= 0:
+		play_sfx(SFX_RAFT_BREAK_PATH, -1.0)
 		begin_return(break_reason)
+	else:
+		play_sfx(SFX_HIT_ROCK_PATH, -2.0, 0.04)
 
 
 func current_salvage_net_reach() -> float:
@@ -1446,9 +1863,11 @@ func collect_pickup(pickup: Dictionary) -> void:
 	if pickup["kind"] == "rope":
 		run_rope += 1
 		burst(pickup["position"], COLOR_ROPE, 9)
+		play_sfx(SFX_PICKUP_ROPE_PATH, -4.0, 0.035)
 	else:
 		run_planks += 1
 		burst(pickup["position"], COLOR_WOOD.lightened(0.2), 9)
+		play_sfx(SFX_PICKUP_PLANK_PATH, -4.0, 0.035)
 
 
 func burst(position: Vector2, color: Color, amount: int) -> void:
@@ -1476,9 +1895,29 @@ func update_particles(delta: float) -> void:
 		particles[index] = particle
 
 
+func update_dropped_cargo(delta: float) -> void:
+	for index in range(dropped_cargo.size() - 1, -1, -1):
+		var cargo := dropped_cargo[index]
+		cargo["life"] = float(cargo["life"]) - delta
+		if float(cargo["life"]) <= 0.0:
+			dropped_cargo.remove_at(index)
+			continue
+		var cargo_position: Vector2 = cargo["position"]
+		var cargo_velocity: Vector2 = cargo["velocity"]
+		cargo_position += cargo_velocity * delta
+		cargo_velocity.y += 205.0 * delta
+		cargo_velocity *= pow(0.985, delta * 60.0)
+		cargo["position"] = cargo_position
+		cargo["velocity"] = cargo_velocity
+		cargo["rotation"] = float(cargo["rotation"]) + float(cargo["spin"]) * delta
+		dropped_cargo[index] = cargo
+
+
 func start_intro() -> void:
 	reset_salvage_net_animation()
+	play_sfx(SFX_PUSH_RAFT_PATH, -2.0)
 	state = State.INTRO
+	start_music_immediately_for_state()
 	state_time = 0.0
 	intro_time = 0.0
 	reset_sail_raise_state()
@@ -1501,6 +1940,8 @@ func start_intro() -> void:
 	sharks.clear()
 	shark_spawn_timer = 1.6
 	particles.clear()
+	dropped_cargo.clear()
+	reset_voyage_dialogues()
 
 
 func start_charging() -> void:
@@ -1540,7 +1981,7 @@ func release_launch() -> void:
 func configure_intro_animation() -> void:
 	var push_factor := pow(clampf(launch_hold_ratio, 0.0, 1.0), 1.18)
 	intro_push_duration = lerpf(INTRO_PUSH_MIN_TIME, INTRO_PUSH_MAX_TIME, push_factor)
-	intro_push_peak_speed = launch_speed_for_hold(launch_hold_ratio)
+	intro_push_peak_speed = launch_speed_for_power(launch_power, false)
 	launch_cruise_speed = launch_speed_for_power(launch_power, true) if launch_overcharged else intro_push_peak_speed
 	if launch_overcharged:
 		intro_action_end = intro_push_duration + INTRO_FAILED_JUMP_TIME
@@ -1554,11 +1995,9 @@ func launch_speed_for_power(power: float, failed_jump: bool) -> float:
 	var safe_power := clampf(power, 0.0, 1.0)
 	if failed_jump:
 		return lerpf(120.0, 175.0, clampf(safe_power / 0.10, 0.0, 1.0))
-	return lerpf(145.0, 820.0, pow(safe_power, 0.68))
-
-
-func launch_speed_for_hold(hold_ratio: float) -> float:
-	return lerpf(145.0, 820.0, pow(clampf(hold_ratio, 0.0, 1.0), 1.35))
+	# Speed grows linearly only through the first 70% of launch quality.
+	# From there to a perfect push, extra quality increases range, not speed.
+	return lerpf(MIN_PUSH_SPEED, MAX_PUSH_SPEED, clampf(safe_power / PUSH_SPEED_CAP_POWER, 0.0, 1.0))
 
 
 func launch_quality_for_charge(charge: float) -> float:
@@ -1566,17 +2005,23 @@ func launch_quality_for_charge(charge: float) -> float:
 	if safe_charge >= LAUNCH_BLACK_START:
 		var black_progress := inverse_lerp(LAUNCH_BLACK_START, 1.0, safe_charge)
 		return lerpf(0.10, 0.0, smoothstep(0.0, 1.0, black_progress))
-
-	var normal_progress := clampf(safe_charge / LAUNCH_GREEN_START, 0.0, 1.0)
-	var normal_quality := pow(normal_progress, 1.25) * 0.68
-	var distance_from_ideal := absf(safe_charge - LAUNCH_IDEAL_CENTER)
-	var sweet_spot := 1.0 - clampf(distance_from_ideal / 0.10, 0.0, 1.0)
-	var perfect_boost := pow(sweet_spot, 4.0) * 0.32
-	return clampf(normal_quality + perfect_boost, 0.0, 1.0)
+	var perfect_start := LAUNCH_IDEAL_CENTER - LAUNCH_IDEAL_HALF_WIDTH
+	var perfect_end := LAUNCH_IDEAL_CENTER + LAUNCH_IDEAL_HALF_WIDTH
+	if safe_charge < LAUNCH_GREEN_START:
+		# Below 70%, speed and range quality rise proportionally with the meter.
+		return safe_charge
+	if safe_charge < perfect_start:
+		var approach := smoothstep(LAUNCH_GREEN_START, perfect_start, safe_charge)
+		return lerpf(PUSH_SPEED_CAP_POWER, 1.0, approach)
+	if safe_charge <= perfect_end:
+		return 1.0
+	var overpush := smoothstep(perfect_end, LAUNCH_BLACK_START, safe_charge)
+	return lerpf(1.0, 0.10, overpush)
 
 
 func return_to_launch_screen() -> void:
 	state = State.HOME
+	pending_round_end_sound_delay = -1.0
 	state_time = 0.0
 	reset_sail_raise_state()
 	reset_launch_dialogues()
@@ -1594,6 +2039,7 @@ func return_to_launch_screen() -> void:
 	return_start_scroll = 1.0
 	sharks.clear()
 	shark_spawn_timer = 1.6
+	reset_voyage_dialogues()
 
 
 func start_zero_progress_gameplay_test() -> void:
@@ -1611,7 +2057,7 @@ func start_zero_progress_gameplay_test() -> void:
 	launch_power = 0.78
 	launch_overcharged = false
 	launch_is_perfect = false
-	launch_cruise_speed = launch_speed_for_hold(launch_hold_ratio)
+	launch_cruise_speed = launch_speed_for_power(launch_power, false)
 	raft_forward_speed = launch_cruise_speed
 	run_target_distance = current_max_distance()
 	begin_run()
@@ -1632,7 +2078,7 @@ func start_sail_level_4_gameplay_test() -> void:
 	launch_power = 0.78
 	launch_overcharged = false
 	launch_is_perfect = false
-	launch_cruise_speed = launch_speed_for_hold(launch_hold_ratio)
+	launch_cruise_speed = launch_speed_for_power(launch_power, false)
 	raft_forward_speed = launch_cruise_speed
 	run_target_distance = current_max_distance()
 	begin_run()
@@ -1640,12 +2086,15 @@ func start_sail_level_4_gameplay_test() -> void:
 
 func begin_run(continue_from_intro: bool = false) -> void:
 	state = State.PLAYING
+	pending_round_end_sound_delay = -1.0
+	start_music_immediately_for_state()
 	state_time = 0.0
 	return_scene_visible = false
 	return_landed = false
 	return_elapsed = 0.0
 	return_impact_time = 0.0
 	if not continue_from_intro:
+		reset_voyage_dialogues()
 		reset_salvage_net_animation()
 		reset_sail_raise_state()
 		distance_m = 0.0
@@ -1656,13 +2105,14 @@ func begin_run(continue_from_intro: bool = false) -> void:
 		raft_health = maximum_raft_health()
 		raft_x = VIEW_SIZE.x * 0.5
 		target_x = raft_x
-		intro_push_peak_speed = launch_speed_for_hold(launch_hold_ratio)
+		intro_push_peak_speed = launch_speed_for_power(launch_power, false)
 		launch_cruise_speed = launch_speed_for_power(launch_power, true) if launch_overcharged else intro_push_peak_speed
 		raft_forward_speed = launch_cruise_speed
 		obstacles.clear()
 		pickups.clear()
 		sharks.clear()
 		shark_spawn_timer = 1.6
+		dropped_cargo.clear()
 	spawn_timer = 0.20
 	spawns_since_pickup = 0
 	last_spawned_pickup_kind = "rope"
@@ -1676,26 +2126,32 @@ func reset_sail_raise_state() -> void:
 	sail_power_active = false
 	sail_power_time = 0.0
 	sail_power_duration = 0.0
+	sail_activation_base_speed = 0.0
 	sail_exhausted = false
 	sail_slowdown_active = false
 	sail_exhaust_time = 0.0
-	sail_power_active = false
-	sail_power_time = 0.0
-	sail_power_duration = 0.0
-	sail_exhausted = false
-	sail_slowdown_active = false
-	sail_exhaust_time = 0.0
+	impact_speed_recovery_active = false
+	impact_speed_recovery_time = 0.0
+	impact_speed_recovery_from = 0.0
+	impact_speed_recovery_target = 0.0
 
 
 func begin_return(reason: String) -> void:
 	if state != State.PLAYING:
 		return
+	reset_voyage_dialogues()
+	if reason.contains("BROKE"):
+		pending_round_end_sound_delay = ROUND_END_AFTER_BREAK_DELAY
+	else:
+		pending_round_end_sound_delay = -1.0
+		play_sfx(SFX_ROUND_END_PATH, -1.0)
 	best_distance_m = maxf(best_distance_m, distance_m)
 	save_progress()
 	sharks.clear()
 	reset_salvage_net_animation()
 	sail_power_active = false
 	sail_slowdown_active = false
+	impact_speed_recovery_active = false
 	state = State.RETURNING
 	state_time = 0.0
 	return_reason = reason
@@ -1744,10 +2200,12 @@ func update_results(delta: float) -> void:
 				result_display_rope += 1
 				result_rope_flash = 1.0
 				burst(RESULT_ROPE_TARGET, Color("#fff1c9"), 5)
+				play_sfx(SFX_RESULT_ROPE_PATH, -7.0, 0.045)
 			else:
 				result_display_planks += 1
 				result_plank_flash = 1.0
 				burst(RESULT_PLANK_TARGET, COLOR_WOOD.lightened(0.28), 5)
+				play_sfx(SFX_RESULT_PLANK_PATH, -7.0, 0.045)
 			result_flyers.remove_at(index)
 		else:
 			result_flyers[index] = flyer
@@ -1809,15 +2267,69 @@ func bank_run() -> void:
 
 func begin_victory() -> void:
 	best_distance_m = maxf(best_distance_m, distance_m)
+	campaign_completed = true
 	bank_run()
+	save_progress()
 	state = State.VICTORY
+	pending_round_end_sound_delay = -1.0
 	state_time = 0.0
+	play_sfx(SFX_ESCAPE_PATH, -1.0)
 	pointer_active = false
 	reset_touch_joystick()
 	obstacles.clear()
 	pickups.clear()
 	sharks.clear()
 	burst(Vector2(raft_x, RAFT_Y), COLOR_ROPE, 30)
+
+
+func enter_freestyle_mode() -> void:
+	freestyle_mode = true
+	campaign_completed = true
+	freestyle_prompt_declined = false
+	freestyle_explanation_open = false
+	reset_game_confirmation_open = false
+	reset_voyage_dialogues()
+	save_progress()
+	open_upgrade_screen(true)
+
+
+func request_full_game_reset() -> void:
+	reset_game_confirmation_open = true
+
+
+func reset_entire_game() -> void:
+	reset_game_confirmation_open = false
+	freestyle_prompt_declined = false
+	freestyle_explanation_open = false
+	campaign_completed = false
+	freestyle_mode = false
+	opening_seen = false
+	total_rope = 0
+	total_planks = 0
+	run_rope = 0
+	run_planks = 0
+	best_distance_m = 0.0
+	distance_m = 0.0
+	world_scroll = 0.0
+	sail_level = 0
+	protection_level = 0
+	oar_level = 0
+	net_level = 0
+	banked_this_run = false
+	sync_visual_raft_level()
+	raft_health = maximum_raft_health()
+	reset_sail_raise_state()
+	reset_salvage_net_animation()
+	reset_touch_joystick()
+	obstacles.clear()
+	pickups.clear()
+	sharks.clear()
+	particles.clear()
+	dropped_cargo.clear()
+	upgrade_info_open = -1
+	update_workshop_background()
+	save_progress()
+	start_opening_sequence(true)
 
 
 func reset_touch_joystick() -> void:
@@ -2012,7 +2524,7 @@ func reset_purchased_upgrades() -> void:
 func try_purchase_sail() -> void:
 	if upgrade_build_active:
 		return
-	if sail_level >= SAIL_MAX_LEVEL:
+	if sail_level >= SAIL_MAX_LEVEL and not freestyle_mode:
 		show_upgrade_feedback("SAIL IS ALREADY MAXED", false)
 		return
 	var cost := sail_upgrade_cost(sail_level)
@@ -2025,7 +2537,7 @@ func try_purchase_sail() -> void:
 func try_purchase_protection() -> void:
 	if upgrade_build_active:
 		return
-	if protection_level >= PROTECTION_MAX_LEVEL:
+	if protection_level >= PROTECTION_MAX_LEVEL and not freestyle_mode:
 		show_upgrade_feedback("GUARD IS ALREADY MAXED", false)
 		return
 	var cost := protection_upgrade_cost(protection_level)
@@ -2071,6 +2583,7 @@ func start_upgrade_build(kind: int) -> void:
 	upgrade_dialogue_wait_remaining = UPGRADE_DIALOGUE_PAUSE
 	upgrade_feedback = "BUILDING %s..." % upgrade_build_name(kind)
 	upgrade_feedback_time = UPGRADE_BUILD_DURATION
+	play_sfx(SFX_UPGRADE_PATH, -2.0)
 	if is_instance_valid(workshop_character_rig):
 		workshop_character_rig.call("play_upgrade_build")
 
@@ -2090,13 +2603,17 @@ func apply_upgrade_build() -> void:
 	var feedback := ""
 	match upgrade_build_kind:
 		0:
-			var previous_range := max_distance_for_sail(sail_level)
+			var previous_level := sail_level
+			var previous_range := max_distance_for_sail(previous_level)
 			var cost := sail_upgrade_cost(sail_level)
 			total_rope -= cost.x
 			total_planks -= cost.y
 			sail_level += 1
-			var range_gain := int(round(max_distance_for_sail(sail_level) - previous_range))
-			feedback = "SAIL UPGRADED  +SPEED  +%d m" % range_gain
+			if freestyle_mode and previous_level >= SAIL_MAX_LEVEL:
+				feedback = "SAIL UPGRADED  +15 SPEED  +5s WIND"
+			else:
+				var range_gain := int(round(max_distance_for_sail(sail_level) - previous_range))
+				feedback = "SAIL UPGRADED  +SPEED  +%d m" % range_gain
 		1:
 			var cost := protection_upgrade_cost(protection_level)
 			total_rope -= cost.x
@@ -2204,7 +2721,7 @@ func sail_upgrade_cost(level: int) -> Vector2i:
 		6: return Vector2i(112, 0)
 		7: return Vector2i(150, 0)
 		8: return Vector2i(195, 0)
-		_: return Vector2i.ZERO
+		_: return Vector2i(195 + (level - 8) * 45, 0)
 
 
 func protection_upgrade_cost(level: int) -> Vector2i:
@@ -2218,7 +2735,7 @@ func protection_upgrade_cost(level: int) -> Vector2i:
 		6: return Vector2i(36, 117)
 		7: return Vector2i(46, 152)
 		8: return Vector2i(58, 192)
-		_: return Vector2i.ZERO
+		_: return Vector2i(58 + (level - 8) * 14, 192 + (level - 8) * 40)
 
 
 func oar_upgrade_cost(level: int) -> Vector2i:
@@ -2289,6 +2806,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and pointer_active and state == State.PLAYING:
 		target_x = event.position.x
 	elif event is InputEventKey and not event.echo:
+		if reset_game_confirmation_open:
+			if event.pressed and event.keycode in [KEY_ESCAPE, KEY_BACKSPACE]:
+				reset_game_confirmation_open = false
+			elif event.pressed and event.keycode in [KEY_ENTER, KEY_SPACE]:
+				reset_entire_game()
+			return
+		if freestyle_explanation_open:
+			if event.pressed and event.keycode in [KEY_ESCAPE, KEY_BACKSPACE]:
+				freestyle_explanation_open = false
+			elif event.pressed and event.keycode in [KEY_ENTER, KEY_SPACE]:
+				enter_freestyle_mode()
+			return
 		if event.keycode in [KEY_ENTER, KEY_SPACE]:
 			if event.pressed:
 				if state == State.HOME:
@@ -2298,7 +2827,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				elif state == State.UPGRADES and not upgrade_build_active:
 					close_upgrade_screen()
 				elif state == State.VICTORY:
-					return_to_launch_screen()
+					freestyle_explanation_open = true
 			elif state == State.CHARGING:
 				release_launch()
 		elif event.pressed and event.keycode == KEY_U and state == State.RESULTS and results_actions_ready():
@@ -2312,6 +2841,18 @@ func steering_axis_for_touch(touch_x: float) -> float:
 
 
 func handle_press(position: Vector2) -> void:
+	if reset_game_confirmation_open:
+		if reset_game_confirm_button.has_point(position):
+			reset_entire_game()
+		elif reset_game_cancel_button.has_point(position):
+			reset_game_confirmation_open = false
+		return
+	if freestyle_explanation_open:
+		if freestyle_start_button.has_point(position):
+			enter_freestyle_mode()
+		elif freestyle_explanation_back_button.has_point(position):
+			freestyle_explanation_open = false
+		return
 	match state:
 		State.OPENING, State.CAPTAIN_PREVIEW, State.ISLAND_ARRIVAL_PREVIEW, State.BEACH_PREVIEW:
 			if opening_skip_button.has_point(position):
@@ -2335,7 +2876,10 @@ func handle_press(position: Vector2) -> void:
 			if upgrade_build_active:
 				return
 			if reset_upgrades_button.has_point(position):
-				reset_purchased_upgrades()
+				if freestyle_mode:
+					request_full_game_reset()
+				else:
+					reset_purchased_upgrades()
 			elif replay_intro_button.has_point(position):
 				start_opening_sequence()
 			elif sail_info_button.has_point(position):
@@ -2360,10 +2904,16 @@ func handle_press(position: Vector2) -> void:
 				upgrade_info_open = -1
 		State.VICTORY:
 			if victory_button.has_point(position):
-				return_to_launch_screen()
+				freestyle_explanation_open = true
+			elif victory_decline_button.has_point(position):
+				freestyle_prompt_declined = true
+			elif victory_reset_button.has_point(position):
+				request_full_game_reset()
 
 
 func save_progress() -> void:
+	if "--smoke-test" in OS.get_cmdline_user_args():
+		return
 	var config := ConfigFile.new()
 	config.set_value("progress", "save_version", SAVE_VERSION)
 	config.set_value("progress", "rope", total_rope)
@@ -2375,6 +2925,8 @@ func save_progress() -> void:
 	config.set_value("progress", "oar_level", oar_level)
 	config.set_value("progress", "net_level", net_level)
 	config.set_value("progress", "opening_seen", opening_seen)
+	config.set_value("progress", "campaign_completed", campaign_completed)
+	config.set_value("progress", "freestyle_mode", freestyle_mode)
 	config.save(SAVE_PATH)
 
 
@@ -2382,8 +2934,8 @@ func load_progress() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
 		return
-	# Version 1 deliberately starts the playable progression from scratch once.
-	# This resets the earlier prototype/test saves on both desktop and Android.
+	# A newer save version deliberately starts progression from scratch once.
+	# This clears resources and upgrades left by earlier prototype/test builds.
 	if int(config.get_value("progress", "save_version", 0)) < SAVE_VERSION:
 		return
 	# Existing players keep everything they collected before the resource rename.
@@ -2391,9 +2943,13 @@ func load_progress() -> void:
 	total_planks = maxi(0, int(config.get_value("progress", "planks", config.get_value("progress", "parts", 0))))
 	best_distance_m = maxf(0.0, float(config.get_value("progress", "best_distance_m", 0.0)))
 	opening_seen = bool(config.get_value("progress", "opening_seen", false))
+	freestyle_mode = bool(config.get_value("progress", "freestyle_mode", false))
+	campaign_completed = bool(config.get_value("progress", "campaign_completed", freestyle_mode)) or freestyle_mode
 	if config.has_section_key("progress", "sail_level"):
-		sail_level = clampi(int(config.get_value("progress", "sail_level", 0)), 0, SAIL_MAX_LEVEL)
-		protection_level = clampi(int(config.get_value("progress", "protection_level", 0)), 0, PROTECTION_MAX_LEVEL)
+		var saved_sail_level := maxi(0, int(config.get_value("progress", "sail_level", 0)))
+		var saved_protection_level := maxi(0, int(config.get_value("progress", "protection_level", 0)))
+		sail_level = saved_sail_level if freestyle_mode else mini(saved_sail_level, SAIL_MAX_LEVEL)
+		protection_level = saved_protection_level if freestyle_mode else mini(saved_protection_level, PROTECTION_MAX_LEVEL)
 		oar_level = clampi(int(config.get_value("progress", "oar_level", 0)), 0, OAR_MAX_LEVEL)
 		net_level = clampi(int(config.get_value("progress", "net_level", 0)), 0, NET_MAX_LEVEL)
 	else:
@@ -2410,9 +2966,15 @@ func load_progress() -> void:
 
 
 func run_smoke_test() -> void:
+	freestyle_mode = false
+	campaign_completed = false
+	reset_game_confirmation_open = false
 	assert(max_distance_for_sail(0) == 75.0)
-	assert(max_distance_for_sail(SAIL_MAX_LEVEL) == ESCAPE_DISTANCE)
+	assert(max_distance_for_sail(SAIL_MAX_LEVEL) == 1600.0)
 	assert(max_distance_for_sail(8) < ESCAPE_DISTANCE)
+	assert(max_distance_for_sail(SAIL_MAX_LEVEL) == ESCAPE_DISTANCE)
+	for level in range(1, SAIL_DURATION_BY_LEVEL.size()):
+		assert(float(SAIL_DURATION_BY_LEVEL[level]) > float(SAIL_DURATION_BY_LEVEL[level - 1]))
 	sail_level = SAIL_MAX_LEVEL
 	assert(current_push_only_max_distance() == PUSH_ONLY_MAX_DISTANCE)
 	sail_level = 0
@@ -2433,17 +2995,30 @@ func run_smoke_test() -> void:
 	var old_level_four_steering := current_steering_speed()
 	oar_level = OAR_MAX_LEVEL
 	assert(is_equal_approx(current_steering_speed(), old_level_four_steering * 1.5))
-	assert(is_equal_approx(
-		500.0 + sail_speed_boost_for_level(9, 500.0),
-		(500.0 + LEGACY_LEVEL_7_SAIL_BOOST) * 2.0
-	))
+	assert(is_equal_approx(launch_speed_for_power(PUSH_SPEED_CAP_POWER, false), MAX_PUSH_SPEED))
+	assert(is_equal_approx(launch_speed_for_power(1.0, false), MAX_PUSH_SPEED))
+	assert(launch_speed_for_power(PUSH_SPEED_CAP_POWER * 0.5, false) < MAX_PUSH_SPEED)
+	assert(is_equal_approx(LAUNCH_FULL_TIME, 2.08))
+	assert(is_equal_approx(500.0 + sail_speed_boost_for_level(9, 500.0), 1400.0))
 	assert(sail_speed_boost_for_level(4, 500.0) - sail_speed_boost_for_level(3, 500.0) > 70.0)
-	assert(sail_speed_boost_for_level(7, 500.0) - sail_speed_boost_for_level(6, 500.0) > 60.0)
+	assert(sail_speed_boost_for_level(7, 500.0) - sail_speed_boost_for_level(6, 500.0) > 100.0)
+	assert(sail_speed_boost_for_level(9, 500.0) - sail_speed_boost_for_level(8, 500.0) > 200.0)
+	sail_level = SAIL_MAX_LEVEL
+	run_target_distance = PUSH_ONLY_MAX_DISTANCE
+	distance_m = 15.0
+	launch_power = 1.0
+	launch_cruise_speed = MAX_PUSH_SPEED
+	raft_forward_speed = MAX_PUSH_SPEED
+	assert(sail_can_catch_wind())
+	raft_forward_speed = MAX_PUSH_SPEED * SAIL_MIN_CATCH_SPEED_RATIO - 1.0
+	assert(not sail_can_catch_wind())
+	sail_level = 0
 	oar_level = 0
 	raft_x = VIEW_SIZE.x * 0.5
 	assert(steering_axis_for_touch(raft_x - 165.0) == -1.0)
 	assert(steering_axis_for_touch(raft_x + 165.0) == 1.0)
-	assert(launch_quality_for_charge(0.02) < 0.02)
+	assert(is_equal_approx(launch_quality_for_charge(0.02), 0.02))
+	assert(is_equal_approx(launch_quality_for_charge(LAUNCH_GREEN_START), PUSH_SPEED_CAP_POWER))
 	assert(launch_quality_for_charge(LAUNCH_IDEAL_CENTER) > 0.99)
 	assert(launch_quality_for_charge(0.96) < 0.05)
 	launch_hold_ratio = 0.15
@@ -2461,7 +3036,8 @@ func run_smoke_test() -> void:
 	launch_overcharged = true
 	configure_intro_animation()
 	assert(launch_cruise_speed < weak_launch_speed)
-	assert(intro_push_peak_speed > launch_cruise_speed * 4.0)
+	assert(intro_push_peak_speed > launch_cruise_speed)
+	assert(intro_push_peak_speed <= MAX_PUSH_SPEED)
 	assert(intro_duration - intro_action_end >= 1.0)
 	return_to_launch_screen()
 	start_charging()
@@ -2519,6 +3095,15 @@ func run_smoke_test() -> void:
 	open_upgrade_screen(true)
 	assert(state == State.UPGRADES)
 	assert(upgrade_returns_to_home)
+	assert(sail_info_button.size.x >= 52.0 and sail_info_button.size.y >= 52.0)
+	handle_press(sail_info_button.get_center())
+	assert(upgrade_info_open == 0)
+	handle_press(protection_info_button.get_center())
+	assert(upgrade_info_open == 1)
+	handle_press(oar_info_button.get_center())
+	assert(upgrade_info_open == 2)
+	handle_press(net_info_button.get_center())
+	assert(upgrade_info_open == 3)
 	close_upgrade_screen()
 	assert(state == State.HOME)
 	reset_upgrade_dialogues()
@@ -2577,7 +3162,8 @@ func run_smoke_test() -> void:
 	raft_forward_speed = 500.0
 	start_sail_power()
 	assert(sail_power_active)
-	assert(run_target_distance > 75.0)
+	assert(is_equal_approx(run_target_distance, ESCAPE_DISTANCE))
+	assert(is_equal_approx(current_sail_powered_speed(), 500.0 + current_sail_speed_boost()))
 	advance_world(0.5)
 	var boosted_test_speed := raft_forward_speed
 	assert(boosted_test_speed > launch_cruise_speed)
@@ -2585,10 +3171,118 @@ func run_smoke_test() -> void:
 	assert(sail_exhausted and sail_slowdown_active)
 	advance_world(0.5)
 	assert(raft_forward_speed < boosted_test_speed)
+	reset_sail_raise_state()
+	sail_level = 1
+	launch_cruise_speed = 500.0
+	raft_forward_speed = 250.0
+	run_target_distance = PUSH_ONLY_MAX_DISTANCE
+	start_sail_power()
+	assert(not sail_power_active)
+	assert(sail_exhausted and sail_slowdown_active)
+	assert(is_equal_approx(run_target_distance, PUSH_ONLY_MAX_DISTANCE))
+	reset_sail_raise_state()
+	sail_level = SAIL_MAX_LEVEL
+	launch_power = 1.0
+	launch_cruise_speed = MAX_PUSH_SPEED
+	raft_forward_speed = MAX_PUSH_SPEED
+	distance_m = 15.0
+	run_target_distance = PUSH_ONLY_MAX_DISTANCE
+	start_sail_power()
+	assert(is_equal_approx(run_target_distance, ESCAPE_DISTANCE))
+	for simulation_step in 2400:
+		update_sail_power(1.0 / 60.0)
+		advance_world(1.0 / 60.0)
+		if not sail_power_active:
+			break
+	# A perfect level-9 sail has roughly 1600 m of total travel energy.
+	assert(distance_m >= 1590.0 and distance_m <= 1620.0)
+	assert(is_equal_approx(rock_speed_loss_for_guard(), 0.50))
+	protection_level = 4
+	assert(is_equal_approx(rock_speed_loss_for_guard(), 0.30))
+	protection_level = 7
+	assert(is_equal_approx(rock_speed_loss_for_guard(), 0.20))
+	protection_level = 9
+	assert(is_zero_approx(rock_speed_loss_for_guard()))
+	state = State.PLAYING
+	protection_level = 1
+	raft_health = 2
+	run_target_distance = 1600.0
+	distance_m = 100.0
+	launch_cruise_speed = MAX_PUSH_SPEED
+	raft_forward_speed = 1400.0
+	sail_power_active = true
+	hit_obstacle()
+	assert(is_equal_approx(raft_forward_speed, 700.0))
+	assert(impact_speed_recovery_active)
+	advance_world(IMPACT_SPEED_RECOVERY_DURATION * 0.5)
+	assert(raft_forward_speed > 700.0 and raft_forward_speed < 1400.0)
+	advance_world(IMPACT_SPEED_RECOVERY_DURATION * 0.5)
+	assert(is_equal_approx(raft_forward_speed, 1400.0))
+	assert(not impact_speed_recovery_active)
+	protection_level = 9
+	raft_health = 2
+	run_rope = 4
+	run_planks = 4
+	dropped_cargo.clear()
+	sail_power_active = true
+	raft_forward_speed = 1400.0
+	hit_obstacle("A SHARK BROKE THE RAFT", true)
+	assert(run_rope + run_planks == 3)
+	assert(dropped_cargo.size() == SHARK_CARGO_LOSS)
+	assert(is_equal_approx(raft_forward_speed, 980.0))
 	state = State.PLAYING
 	distance_m = ESCAPE_DISTANCE
 	update_playing(0.0)
+	assert(state == State.DESTINATION_APPROACH)
+	var destination_scroll := world_scroll
+	state_time = DESTINATION_SLOWDOWN_DURATION * 0.5
+	update_destination_approach(0.1)
+	assert(world_scroll > destination_scroll)
+	var docking_scroll := world_scroll
+	state_time = DESTINATION_SLOWDOWN_DURATION + DESTINATION_DOCK_DURATION * 0.5
+	update_destination_approach(0.1)
+	assert(is_equal_approx(world_scroll, docking_scroll))
+	assert(destination_raft_position().y < RAFT_Y)
+	state_time = DESTINATION_APPROACH_DURATION
+	update_destination_approach(0.0)
 	assert(state == State.VICTORY)
+	assert(campaign_completed)
+	handle_press(victory_button.get_center())
+	assert(freestyle_explanation_open and not freestyle_mode)
+	handle_press(freestyle_start_button.get_center())
+	assert(freestyle_mode and state == State.UPGRADES)
+	sail_level = SAIL_MAX_LEVEL
+	protection_level = PROTECTION_MAX_LEVEL
+	total_rope = 1000
+	total_planks = 1000
+	var level_nine_duration := current_sail_power_duration()
+	var level_nine_boost := current_sail_speed_boost()
+	try_purchase_sail()
+	update_upgrade_build(UPGRADE_BUILD_REVEAL_TIME + 0.01)
+	assert(sail_level == SAIL_MAX_LEVEL + 1)
+	assert(is_equal_approx(current_sail_power_duration(), level_nine_duration + FREESTYLE_SAIL_DURATION_GAIN))
+	assert(is_equal_approx(current_sail_speed_boost(), level_nine_boost + FREESTYLE_SAIL_SPEED_GAIN))
+	update_upgrade_build(UPGRADE_BUILD_DURATION)
+	try_purchase_protection()
+	update_upgrade_build(UPGRADE_BUILD_REVEAL_TIME + 0.01)
+	assert(protection_level == PROTECTION_MAX_LEVEL + 1)
+	assert(maximum_raft_health() == PROTECTION_MAX_LEVEL + 2)
+	update_upgrade_build(UPGRADE_BUILD_DURATION)
+	reset_sail_raise_state()
+	state = State.PLAYING
+	distance_m = ESCAPE_DISTANCE
+	run_target_distance = PUSH_ONLY_MAX_DISTANCE
+	sail_raised = true
+	sail_power_active = true
+	sail_power_duration = current_sail_power_duration()
+	raft_forward_speed = MAX_PUSH_SPEED
+	update_playing(0.0)
+	assert(state == State.PLAYING)
+	reset_entire_game()
+	assert(state == State.OPENING)
+	assert(not freestyle_mode and not campaign_completed)
+	assert(total_rope == 0 and total_planks == 0)
+	assert(sail_level == 0 and protection_level == 0 and oar_level == 0 and net_level == 0)
 	print("SMOKE_TEST_OK")
 	get_tree().quit()
 
@@ -2685,7 +3379,7 @@ func _draw() -> void:
 			draw_home()
 		State.INTRO:
 			draw_intro()
-		State.PLAYING, State.RETURNING:
+		State.PLAYING, State.DESTINATION_APPROACH, State.RETURNING:
 			draw_game()
 		State.RESULTS:
 			draw_results()
@@ -2694,6 +3388,10 @@ func _draw() -> void:
 		State.VICTORY:
 			draw_victory()
 	draw_particles()
+	if freestyle_explanation_open:
+		draw_freestyle_explanation()
+	if reset_game_confirmation_open:
+		draw_reset_game_confirmation()
 
 
 func draw_opening_island_arrival(scene_time: float) -> void:
@@ -4059,14 +4757,25 @@ func draw_launch_meter() -> void:
 	var unfilled_x := inner.position.x + inner.size.x * launch_charge
 	if launch_charge < 1.0:
 		draw_rect(Rect2(Vector2(unfilled_x, inner.position.y), Vector2(inner.end.x - unfilled_x, inner.size.y)), Color(0.02, 0.12, 0.18, 0.72))
-	draw_line(Vector2(unfilled_x, meter.position.y - 5), Vector2(unfilled_x, meter.end.y + 5), Color.WHITE, 5)
+	var overpush_x := inner.position.x + inner.size.x * LAUNCH_BLACK_START
+	var overpush_width := inner.end.x - overpush_x
+	draw_line(Vector2(overpush_x, meter.position.y - 7), Vector2(overpush_x, meter.end.y + 7), Color("#ff5b8f"), 4.0)
+	for stripe_index in 4:
+		var stripe_x := overpush_x + 5.0 + float(stripe_index) * overpush_width / 4.0
+		draw_line(Vector2(stripe_x, inner.end.y - 3.0), Vector2(minf(stripe_x + 12.0, inner.end.x), inner.position.y + 3.0), Color(1.0, 0.55, 0.72, 0.62), 2.0)
+	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(overpush_x - 5.0, meter.position.y - 9.0), "OVER", HORIZONTAL_ALIGNMENT_CENTER, overpush_width + 10.0, 12, Color("#ff8bad"))
+	var marker_color := Color("#ff3f72") if launch_charge >= LAUNCH_BLACK_START else Color.WHITE
+	draw_line(Vector2(unfilled_x, meter.position.y - 5), Vector2(unfilled_x, meter.end.y + 5), marker_color, 5)
+	if state == State.CHARGING and launch_charge >= LAUNCH_BLACK_START:
+		draw_text_center("OVERPUSH!  HE CAN'T BOARD", 540, 18, Color("#ff6b93"))
 
 
 func launch_meter_color(ratio: float) -> Color:
 	var red := Color("#e63946")
 	var yellow := Color("#ffd166")
 	var green := Color("#43c86f")
-	var black := Color("#050709")
+	var overpush := Color("#b30f4f")
+	var overpush_end := Color("#310618")
 	if ratio < LAUNCH_YELLOW_POINT:
 		return red.lerp(yellow, smoothstep(0.0, LAUNCH_YELLOW_POINT, ratio))
 	if ratio < LAUNCH_GREEN_START:
@@ -4074,7 +4783,7 @@ func launch_meter_color(ratio: float) -> Color:
 	if ratio < LAUNCH_BLACK_START:
 		var ideal_glow := 1.0 - clampf(absf(ratio - LAUNCH_IDEAL_CENTER) / 0.10, 0.0, 1.0)
 		return green.lightened(ideal_glow * 0.16)
-	return green.lerp(black, smoothstep(LAUNCH_BLACK_START, 1.0, ratio))
+	return overpush.lerp(overpush_end, smoothstep(LAUNCH_BLACK_START, 1.0, ratio))
 
 
 func draw_intro() -> void:
@@ -4139,29 +4848,98 @@ func draw_game() -> void:
 		draw_rock(obstacle)
 	for shark in sharks:
 		draw_shark(shark)
+	if state == State.DESTINATION_APPROACH:
+		draw_destination_island_edge()
 
 	var return_offset := 0.0
 	if state == State.RETURNING:
 		return_offset = returning_raft_offset()
+	var raft_draw_position := Vector2(raft_x, RAFT_Y + return_offset)
+	if state == State.DESTINATION_APPROACH:
+		raft_draw_position = destination_raft_position()
 	var wake_strength := lerpf(0.28, 1.05, clampf(inverse_lerp(90.0, 850.0, raft_forward_speed), 0.0, 1.0))
-	draw_raft_wake(Vector2(raft_x, RAFT_Y + return_offset), wake_strength)
+	draw_raft_wake(raft_draw_position, wake_strength)
 	if launch_overcharged:
-		draw_launch_splash(Vector2(raft_x, RAFT_Y + return_offset + 166.0), 0.88)
-		draw_top_raft(Vector2(raft_x, RAFT_Y + return_offset), raft_level, raft_health, 1)
-		draw_push_sprite(Vector2i(1, 1), Vector2(raft_x, RAFT_Y + return_offset + 150.0 * RAFT_GAMEPLAY_SCALE), Vector2(174.0, 174.0) * RAFT_GAMEPLAY_SCALE)
+		draw_launch_splash(raft_draw_position + Vector2(0.0, 166.0), 0.88)
+		draw_top_raft(raft_draw_position, raft_level, raft_health, 1)
+		draw_push_sprite(Vector2i(1, 1), raft_draw_position + Vector2(0.0, 150.0 * RAFT_GAMEPLAY_SCALE), Vector2(174.0, 174.0) * RAFT_GAMEPLAY_SCALE)
 	else:
-		draw_top_raft(Vector2(raft_x, RAFT_Y + return_offset), raft_level, raft_health)
+		draw_top_raft(raft_draw_position, raft_level, raft_health)
+	for cargo in dropped_cargo:
+		draw_dropped_cargo_item(cargo)
+	draw_gameplay_voyage_dialogue(raft_draw_position)
 
 	if hit_flash > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(1.0, 0.18, 0.15, hit_flash * 0.85))
 
-	draw_game_hud()
-	if can_raise_sail():
-		draw_wood_plank_button(raise_sail_button, "RAISE SAIL", true, 21, Color("#8d4f2d"), UPGRADE_UI_BOLD_FONT)
-	if touch_joystick_enabled and state == State.PLAYING:
-		draw_touch_joystick()
+	if state != State.DESTINATION_APPROACH:
+		draw_game_hud()
+		if can_raise_sail():
+			draw_wood_plank_button(raise_sail_button, "RAISE SAIL", true, 21, Color("#8d4f2d"), UPGRADE_UI_BOLD_FONT)
+		if touch_joystick_enabled and state == State.PLAYING:
+			draw_touch_joystick()
 	if state == State.RETURNING:
 		draw_return_overlay()
+
+
+func draw_gameplay_voyage_dialogue(raft_position: Vector2) -> void:
+	if voyage_dialogue_text.is_empty() or voyage_dialogue_duration <= 0.0:
+		return
+	var font_size := 24
+	var text_width := UPGRADE_UI_FONT.get_string_size(voyage_dialogue_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var bubble_width := clampf(text_width + 42.0, 190.0, 450.0)
+	var bubble_height := 68.0
+	var bubble_x := clampf(raft_position.x - bubble_width * 0.5, 18.0, VIEW_SIZE.x - bubble_width - 18.0)
+	var bubble_y := clampf(raft_position.y - 245.0, 175.0, 800.0)
+	var bubble_rect := Rect2(Vector2(bubble_x, bubble_y), Vector2(bubble_width, bubble_height))
+	var remaining_time := voyage_dialogue_duration - voyage_dialogue_time
+	var dialogue_alpha := minf(
+		smoothstep(0.0, 1.0, clampf(voyage_dialogue_time / 0.20, 0.0, 1.0)),
+		smoothstep(0.0, 1.0, clampf(remaining_time / 0.28, 0.0, 1.0))
+	)
+	var base_color := Color("#eaf7ff") if voyage_dialogue_speaker == "fat" else Color("#fff5dc")
+	var bubble_color := Color(base_color, 0.97 * dialogue_alpha)
+	var ink_color := Color(0.025, 0.055, 0.070, dialogue_alpha)
+	var speaker_offset_x := -26.0 if voyage_dialogue_speaker == "fat" else 28.0
+	var speaker_point := raft_position + Vector2(speaker_offset_x, -48.0)
+	var tail_x := clampf(speaker_point.x, bubble_rect.position.x + 28.0, bubble_rect.end.x - 28.0)
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(tail_x - 12.0, bubble_rect.end.y - 2.0),
+		Vector2(tail_x + 12.0, bubble_rect.end.y - 2.0),
+		speaker_point,
+	]), bubble_color)
+	var bubble_style := StyleBoxFlat.new()
+	bubble_style.bg_color = bubble_color
+	bubble_style.border_color = ink_color
+	bubble_style.set_border_width_all(3)
+	bubble_style.set_corner_radius_all(17)
+	bubble_style.shadow_color = Color(0.0, 0.0, 0.0, 0.22 * dialogue_alpha)
+	bubble_style.shadow_size = 5
+	bubble_style.shadow_offset = Vector2(0.0, 4.0)
+	draw_style_box(bubble_style, bubble_rect)
+	draw_string(
+		UPGRADE_UI_FONT,
+		bubble_rect.position + Vector2(20.0, 44.0),
+		voyage_dialogue_text,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		bubble_rect.size.x - 40.0,
+		font_size,
+		ink_color
+	)
+
+
+func draw_destination_island_edge() -> void:
+	if state_time < DESTINATION_SLOWDOWN_DURATION:
+		return
+	var reveal_time := state_time - DESTINATION_SLOWDOWN_DURATION
+	var reveal_progress := smoothstep(0.0, 1.0, clampf(reveal_time / DESTINATION_ISLAND_REVEAL_DURATION, 0.0, 1.0))
+	var hidden_center_y := -DESTINATION_ISLAND_SIZE * 0.5 - 100.0
+	var island_center := Vector2(DESTINATION_ISLAND_CENTER.x, lerpf(hidden_center_y, DESTINATION_ISLAND_CENTER.y, reveal_progress))
+	var island_rect := Rect2(
+		island_center - Vector2.ONE * DESTINATION_ISLAND_SIZE * 0.5,
+		Vector2.ONE * DESTINATION_ISLAND_SIZE
+	)
+	draw_texture_rect(ISLAND_SPRITE, island_rect, false)
 
 
 func returning_raft_offset() -> float:
@@ -4285,16 +5063,66 @@ func draw_game_hud() -> void:
 	draw_text("SAIL %d" % sail_level, Vector2(170, 60), 17, COLOR_INK.lightened(0.12))
 	draw_text("HULL %d/%d" % [raft_health, maximum_raft_health()], Vector2(170, 104), 15, COLOR_CORAL)
 
-	var bar := Rect2(280, 32, 420, 34)
-	draw_rect(bar, Color(0.02, 0.19, 0.29, 0.72))
-	var progress := clampf(distance_m / run_target_distance, 0.0, 1.0)
-	draw_rect(Rect2(bar.position + Vector2(5, 5), Vector2((bar.size.x - 10) * progress, bar.size.y - 10)), COLOR_ROPE)
-	draw_sail_power_timer()
-	draw_string(ThemeDB.fallback_font, Vector2(bar.position.x, 104), "%d / %d m" % [int(distance_m), int(run_target_distance)], HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 22, Color.WHITE)
+	# Freestyle keeps a permanent distance/record line because it has no goal.
+	# Campaign launch range disappears once the sail opens, together with the
+	# former red sail-fuel timer.
+	if freestyle_mode:
+		draw_freestyle_distance_progress()
+	elif not sail_raise_active and not sail_raised:
+		var bar := Rect2(280, 32, 420, 34)
+		draw_rect(bar, Color(0.02, 0.19, 0.29, 0.72))
+		var progress := clampf(distance_m / maxf(run_target_distance, 1.0), 0.0, 1.0)
+		draw_rect(Rect2(bar.position + Vector2(5, 5), Vector2((bar.size.x - 10) * progress, bar.size.y - 10)), COLOR_ROPE)
+		draw_string(ThemeDB.fallback_font, Vector2(bar.position.x, 104), "%d / %d m" % [int(distance_m), int(run_target_distance)], HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 22, Color.WHITE)
+	if not freestyle_mode:
+		draw_destination_progress()
 	draw_text_center("SWIPE LEFT / RIGHT", 158, 18, Color.WHITE)
 	if state == State.PLAYING and state_time < 2.2:
 		var launch_alpha := clampf((2.2 - state_time) / 0.6, 0.0, 1.0)
 		draw_text_center("LAUNCH RANGE: %d m" % int(run_target_distance), 198, 23, Color(1.0, 0.91, 0.45, launch_alpha))
+
+
+func draw_freestyle_distance_progress() -> void:
+	var record_distance := maxf(maxf(best_distance_m, distance_m), 1.0)
+	var progress := clampf(distance_m / record_distance, 0.0, 1.0)
+	var bar := Rect2(280, 38, 420, 30)
+	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(bar.position.x, 28), "FREESTYLE DISTANCE", HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 15, Color.WHITE)
+	draw_rect(bar, Color(0.02, 0.19, 0.29, 0.82))
+	draw_rect(Rect2(bar.position + Vector2(5, 5), Vector2((bar.size.x - 10) * progress, bar.size.y - 10)), COLOR_ROPE)
+	draw_rect(bar, Color(0.86, 0.96, 0.92, 0.88), false, 2.0)
+	var marker_x := bar.position.x + 5.0 + (bar.size.x - 10.0) * progress
+	draw_circle(Vector2(marker_x, bar.get_center().y), 7.0, Color("#f5d27a"))
+	draw_arc(Vector2(marker_x, bar.get_center().y), 7.0, 0.0, TAU, 16, Color.WHITE, 1.5, true)
+	draw_string(
+		ThemeDB.fallback_font,
+		Vector2(bar.position.x, 103),
+		"%d m     |     BEST %d m" % [int(distance_m), int(record_distance)],
+		HORIZONTAL_ALIGNMENT_CENTER,
+		bar.size.x,
+		21,
+		Color.WHITE
+	)
+
+
+func draw_destination_progress() -> void:
+	var line_x := 687.0
+	var line_top := 310.0
+	var line_bottom := 1080.0
+	var line_height := line_bottom - line_top
+	var progress := clampf(distance_m / ESCAPE_DISTANCE, 0.0, 1.0)
+	var marker_y := lerpf(line_bottom, line_top, progress)
+	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(588, line_top - 20), "GOAL", HORIZONTAL_ALIGNMENT_CENTER, 92, 16, Color.WHITE)
+	draw_rect(Rect2(line_x - 6.0, line_top, 12.0, line_height), Color(0.015, 0.12, 0.18, 0.78))
+	draw_rect(Rect2(line_x - 3.0, marker_y, 6.0, line_bottom - marker_y), COLOR_CORAL)
+	for tick_index in 5:
+		var tick_y := lerpf(line_bottom, line_top, float(tick_index) / 4.0)
+		draw_line(Vector2(line_x - 11.0, tick_y), Vector2(line_x + 7.0, tick_y), Color(1.0, 1.0, 1.0, 0.78), 2.0)
+	draw_circle(Vector2(line_x, marker_y), 10.0, Color("#f5d27a"))
+	draw_arc(Vector2(line_x, marker_y), 10.0, 0.0, TAU, 20, Color.WHITE, 2.0, true)
+	var remaining_metres := maxi(0, int(ceil(ESCAPE_DISTANCE - distance_m)))
+	var label_rect := Rect2(565.0, clampf(marker_y - 18.0, line_top + 7.0, line_bottom - 35.0), 108.0, 34.0)
+	draw_rect(label_rect, Color(0.015, 0.12, 0.18, 0.80))
+	draw_string(ThemeDB.fallback_font, label_rect.position + Vector2(0.0, 24.0), "%d m" % remaining_metres, HORIZONTAL_ALIGNMENT_CENTER, label_rect.size.x, 17, Color.WHITE)
 
 
 func draw_sail_power_timer() -> void:
@@ -4357,7 +5185,10 @@ func draw_results() -> void:
 		draw_text_center("SUPPLIES STORED!", 665, 19, Color(0.14, 0.55, 0.42, stored_alpha))
 	else:
 		draw_text_center("STORING SALVAGE...", 665, 19, Color("#45647a"))
-	draw_text_center("Range %d m    |    Safe rock hits %d" % [int(current_max_distance()), protection_level], 704, 19, Color("#45647a"))
+	if freestyle_mode:
+		draw_text_center("FREESTYLE DISTANCE: %d m    |    Safe rock hits %d" % [int(distance_m), protection_level], 704, 19, Color("#45647a"))
+	else:
+		draw_text_center("Range %d m    |    Safe rock hits %d" % [int(current_max_distance()), protection_level], 704, 19, Color("#45647a"))
 	if not return_scene_visible:
 		draw_top_raft(Vector2(360, 800 + sin(state_time * 2.4) * 4.0), raft_level, maximum_raft_health())
 	draw_result_flyers()
@@ -4414,7 +5245,8 @@ func draw_upgrades() -> void:
 	draw_rect(Rect2(0, 0, VIEW_SIZE.x, 165), Color(0.02, 0.12, 0.18, 0.90))
 	draw_upgrade_build_smoke()
 	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(0, 62), "RAFT BLUEPRINTS", HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 42, Color.WHITE)
-	draw_string(UPGRADE_UI_FONT, Vector2(0, 99), "Choose what to improve", HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 20, Color("#c8f4f7"))
+	var workshop_subtitle := "FREESTYLE MODE  -  NO DISTANCE LIMIT" if freestyle_mode else "Choose what to improve"
+	draw_string(UPGRADE_UI_FONT, Vector2(0, 99), workshop_subtitle, HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 20, Color("#c8f4f7"))
 	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(0, 140), "ROPE  %d     |     PLANKS  %d" % [total_rope, total_planks], HORIZONTAL_ALIGNMENT_CENTER, VIEW_SIZE.x, 22, COLOR_ROPE)
 
 	draw_upgrade_card(Rect2(293, 175, 407, 96), 0, "SAIL", sail_level, SAIL_MAX_LEVEL)
@@ -4422,7 +5254,8 @@ func draw_upgrades() -> void:
 	draw_upgrade_card(Rect2(293, 377, 407, 96), 2, "OAR", oar_level, OAR_MAX_LEVEL)
 	draw_upgrade_card(Rect2(293, 478, 407, 96), 3, "SALVAGE NET", net_level, NET_MAX_LEVEL)
 	draw_upgrade_info_panel()
-	draw_workshop_plank_button(reset_upgrades_button, "RESET UPGRADES", not upgrade_build_active, 16, Color("#815033"))
+	var reset_label := "RESET GAME" if freestyle_mode else "RESET UPGRADES"
+	draw_workshop_plank_button(reset_upgrades_button, reset_label, not upgrade_build_active, 16, Color("#815033"))
 	draw_workshop_plank_button(replay_intro_button, "WATCH INTRO", not upgrade_build_active, 17, Color("#8b643e"))
 
 	if upgrade_feedback_time > 0.0 and not upgrade_feedback.is_empty():
@@ -4569,7 +5402,10 @@ func draw_upgrade_card(rect: Rect2, icon_index: int, title: String, level: int, 
 	draw_upgrade_icon(icon_index, rect.position + Vector2(50.0, 51.0), Vector2(84.0, 84.0))
 	var title_font_size := 18 if title.length() > 9 else 20
 	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(92, 28), title, HORIZONTAL_ALIGNMENT_CENTER, 140, title_font_size, COLOR_UPGRADE_INK)
-	draw_string(ThemeDB.fallback_font, rect.position + Vector2(232, 27), "LEVEL %d / %d" % [level, max_level], HORIZONTAL_ALIGNMENT_CENTER, 115, 14, COLOR_UPGRADE_MUTED_INK)
+	var unlimited_upgrade := freestyle_mode and icon_index in [0, 1]
+	var level_label := "LEVEL %d / UNLIMITED" % level if unlimited_upgrade else "LEVEL %d / %d" % [level, max_level]
+	var level_font_size := 11 if unlimited_upgrade else 14
+	draw_string(ThemeDB.fallback_font, rect.position + Vector2(222, 27), level_label, HORIZONTAL_ALIGNMENT_CENTER, 135, level_font_size, COLOR_UPGRADE_MUTED_INK)
 	var info_rect := sail_info_button
 	var button_rect := sail_upgrade_button
 	var cost := sail_upgrade_cost(level)
@@ -4587,7 +5423,7 @@ func draw_upgrade_card(rect: Rect2, icon_index: int, title: String, level: int, 
 			button_rect = net_upgrade_button
 			cost = net_upgrade_cost(level)
 	draw_upgrade_info_badge(info_rect, upgrade_info_open == icon_index)
-	if level >= max_level:
+	if level >= max_level and not unlimited_upgrade:
 		draw_string(UPGRADE_UI_FONT, rect.position + Vector2(101, 67), "NO MORE MATERIALS NEEDED", HORIZONTAL_ALIGNMENT_CENTER, 165, 12, COLOR_UPGRADE_MUTED_INK)
 		draw_compact_button(button_rect, "MAX LEVEL", false, COLOR_CORAL)
 	else:
@@ -4622,7 +5458,7 @@ func draw_upgrade_info_badge(rect: Rect2, selected: bool) -> void:
 	var color := COLOR_CORAL if selected else COLOR_WATER
 	draw_circle(rect.get_center(), 17.0, color)
 	draw_arc(rect.get_center(), 17.0, 0.0, TAU, 24, Color.WHITE, 2.0, true)
-	draw_string(UPGRADE_UI_BOLD_FONT, rect.position + Vector2(0, 28), "!", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Color.WHITE)
+	draw_string(UPGRADE_UI_BOLD_FONT, Vector2(rect.position.x, rect.get_center().y + 9.0), "!", HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Color.WHITE)
 
 
 func draw_upgrade_info_panel() -> void:
@@ -4643,14 +5479,38 @@ func draw_upgrade_info_panel() -> void:
 	]), panel_color)
 	if upgrade_info_open == 0:
 		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "SAIL UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
-		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level adds range and speed.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
-		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "Bigger speed jumps: L4 and L7.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
-		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current maximum: %d m" % int(current_max_distance()), HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+		if freestyle_mode:
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Every new level adds +15 speed", HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "and +5 seconds of sailing.", HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current boost: +%d" % int(current_sail_speed_boost()), HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+		else:
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level adds range and speed.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "Bigger speed jumps: L4, L7, L9.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current maximum: %d m" % int(current_max_distance()), HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
 	elif upgrade_info_open == 1:
 		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "GUARD UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
-		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level absorbs one more", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
-		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 87), "rock collision before breaking.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
-		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Current safe hits: %d" % protection_level, HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+		if freestyle_mode:
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 68), "Every new level absorbs", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 91), "one additional impact.", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 116), "Safe rock hits: %d" % protection_level, HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+		elif protection_level >= PROTECTION_MAX_LEVEL:
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 68), "Maximum protection reached.", HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_MUTED_INK)
+			draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 105), "NO ROCK SLOW EFFECT", HORIZONTAL_ALIGNMENT_LEFT, 236, 16, COLOR_UPGRADE_STATUS_INK)
+		else:
+			var next_guard_level := protection_level + 1
+			var current_slow_percent := int(round(rock_speed_loss_for_guard() * 100.0))
+			var next_slow_percent := current_slow_percent
+			if next_guard_level >= 9:
+				next_slow_percent = 0
+			elif next_guard_level >= 7:
+				next_slow_percent = 20
+			elif next_guard_level >= 4:
+				next_slow_percent = 30
+			draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 65), "NEXT LEVEL: +1 SAFE ROCK HIT", HORIZONTAL_ALIGNMENT_LEFT, 236, 15, COLOR_UPGRADE_MUTED_INK)
+			var next_effect := "Rock slow effect stays at %d%%" % current_slow_percent
+			if next_slow_percent != current_slow_percent:
+				next_effect = "Rock slow effect: %d%% -> %d%%" % [current_slow_percent, next_slow_percent]
+			draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 104), next_effect, HORIZONTAL_ALIGNMENT_LEFT, 236, 15, COLOR_UPGRADE_STATUS_INK)
 	elif upgrade_info_open == 2:
 		draw_string(UPGRADE_UI_BOLD_FONT, panel_rect.position + Vector2(16, 31), "OAR UPGRADE", HORIZONTAL_ALIGNMENT_LEFT, 236, 20, COLOR_UPGRADE_INK)
 		draw_string(UPGRADE_UI_FONT, panel_rect.position + Vector2(16, 64), "Each level makes the raft", HORIZONTAL_ALIGNMENT_LEFT, 236, 17, COLOR_UPGRADE_MUTED_INK)
@@ -4734,13 +5594,52 @@ func draw_victory() -> void:
 	for index in 15:
 		var y := 680.0 + index * 40.0
 		draw_line(Vector2(0, y), Vector2(VIEW_SIZE.x, y + sin(state_time + index) * 9.0), Color(0.35, 0.72, 0.78, 0.35), 3)
-	var sail_y := lerpf(980.0, 720.0, clampf(state_time / 5.0, 0.0, 1.0))
+	var sail_y := lerpf(790.0, 610.0, clampf(state_time / 5.0, 0.0, 1.0))
 	draw_raft_wake(Vector2(360, sail_y), 0.95)
-	draw_top_raft(Vector2(360, sail_y + sin(state_time * 2.0) * 4.0), 3, 3, 2)
+	draw_top_raft(Vector2(360, sail_y + sin(state_time * 2.0) * 4.0), 3, maximum_raft_health(), 2)
 	draw_text_center("YOU ESCAPED!", 135, 54, Color.WHITE)
 	draw_text_center("The raft beat the current and sailed to safety.", 190, 22, Color("#fff4d6"))
-	draw_text_center("This is the end of the simple prototype.", 232, 19, COLOR_INK)
-	draw_button(victory_button, "BACK TO THE ISLAND", true, COLOR_CORAL)
+	draw_text_center("You completed Raft Escape.", 232, 21, COLOR_INK)
+	if freestyle_prompt_declined:
+		draw_text_center("Freestyle Mode will remain available whenever you are ready.", 278, 18, COLOR_INK)
+	else:
+		draw_text_center("Continue in Freestyle Mode with unlimited upgrades?", 278, 18, COLOR_INK)
+	draw_wood_plank_button(victory_button, "ENTER FREESTYLE", true, 25, Color("#8d4f2d"), UPGRADE_UI_BOLD_FONT)
+	if not freestyle_prompt_declined:
+		draw_wood_plank_button(victory_decline_button, "NOT NOW", true, 22, Color("#6f5b37"), UPGRADE_UI_BOLD_FONT)
+	draw_wood_plank_button(victory_reset_button, "RESET GAME", true, 22, Color("#744332"), UPGRADE_UI_BOLD_FONT)
+
+
+func draw_freestyle_explanation() -> void:
+	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.01, 0.035, 0.05, 0.84))
+	var panel_rect := Rect2(45, 245, 630, 745)
+	draw_panel(panel_rect, Color(0.96, 0.92, 0.80, 0.99))
+	draw_text_center("FREESTYLE MODE", 330, 39, COLOR_INK)
+	draw_text_center("The story is complete, but the voyage can continue.", 388, 20, Color("#45647a"))
+	draw_text_center("There is no final island or distance limit.", 425, 22, COLOR_INK)
+	draw_text_center("Keep launching, collect materials and sail", 474, 20, COLOR_INK)
+	draw_text_center("as far as your upgraded raft can carry you.", 505, 20, COLOR_INK)
+	draw_panel(Rect2(82, 548, 556, 166), Color(0.89, 0.86, 0.73, 0.98))
+	draw_text_center("SAIL", 590, 22, COLOR_CORAL)
+	draw_text_center("Unlimited levels: +15 speed and +5 seconds each", 623, 18, COLOR_INK)
+	draw_text_center("GUARD", 665, 22, COLOR_CORAL)
+	draw_text_center("Unlimited levels: +1 additional safe impact each", 698, 18, COLOR_INK)
+	draw_text_center("Your current resources and upgrades will be kept.", 754, 18, Color("#45647a"))
+	draw_wood_plank_button(freestyle_start_button, "START FREESTYLE", true, 24, Color("#8d4f2d"), UPGRADE_UI_BOLD_FONT)
+	draw_wood_plank_button(freestyle_explanation_back_button, "BACK", true, 21, Color("#6f5b37"), UPGRADE_UI_BOLD_FONT)
+
+
+func draw_reset_game_confirmation() -> void:
+	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.01, 0.035, 0.05, 0.82))
+	var panel_rect := Rect2(55, 400, 610, 500)
+	draw_panel(panel_rect, Color(0.96, 0.92, 0.80, 0.99))
+	draw_text_center("RESET GAME?", 485, 40, COLOR_INK)
+	draw_text_center("Are you sure?", 550, 27, COLOR_CORAL)
+	draw_text_center("You will lose all progress.", 590, 24, COLOR_INK)
+	draw_text_center("Resources, upgrades and Freestyle Mode", 630, 18, Color("#45647a"))
+	draw_text_center("will be permanently reset.", 657, 18, Color("#45647a"))
+	draw_wood_plank_button(reset_game_confirm_button, "YES, RESET EVERYTHING", true, 21, Color("#8b3f32"), UPGRADE_UI_BOLD_FONT)
+	draw_wood_plank_button(reset_game_cancel_button, "CANCEL", true, 22, Color("#6f5b37"), UPGRADE_UI_BOLD_FONT)
 
 
 func draw_panel(rect: Rect2, color: Color = COLOR_PANEL) -> void:
@@ -5185,6 +6084,14 @@ func draw_resource_icon(kind: String, position: Vector2, size: Vector2, rotation
 	var fitted_size := texture_size * fit_scale
 	draw_texture_rect(resource_texture, Rect2(-fitted_size * 0.5, fitted_size), false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func draw_dropped_cargo_item(cargo: Dictionary) -> void:
+	var life_ratio := clampf(float(cargo["life"]) / float(cargo["max_life"]), 0.0, 1.0)
+	var alpha := smoothstep(0.0, 0.32, life_ratio)
+	var kind: String = cargo["kind"]
+	var icon_size := Vector2(54.0, 54.0) if kind == "rope" else Vector2(66.0, 66.0)
+	draw_resource_icon(kind, cargo["position"], icon_size, float(cargo["rotation"]), alpha)
 
 
 func draw_rock(obstacle: Dictionary) -> void:

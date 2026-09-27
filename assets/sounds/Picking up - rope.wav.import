@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://0aivxfcugxwk"
+path="res://.godot/imported/Picking up - rope.wav-b4b9e7f6d830c6f43c29552e9ca6f69e.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Picking up - rope.wav"
+dest_files=["res://.godot/imported/Picking up - rope.wav-b4b9e7f6d830c6f43c29552e9ca6f69e.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

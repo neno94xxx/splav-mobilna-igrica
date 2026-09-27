@@ -88,7 +88,7 @@ try {
     Write-Host "Velicina: $([math]::Round($bundle.Length / 1MB, 2)) MB"
     Write-Host "SHA256: $($bundleHash.Hash)"
     Write-Host ""
-    Write-Host "Nemoj ga jos slati na Play Console. Nakon finalne ikone napravit cemo zavrsni build." -ForegroundColor Yellow
+    Write-Host "AAB je spreman za upload na Google Play Console." -ForegroundColor Green
 }
 finally {
     Remove-Item Env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD -ErrorAction SilentlyContinue

@@ -1,5 +1,7 @@
 extends Node2D
 
+signal normal_hammer_hit
+
 const LOOP_TIME := 5.80
 const WORK_LOOP := &"parts_work_loop"
 const UPGRADE_BUILD := &"upgrade_build"
@@ -74,6 +76,13 @@ func build_animation() -> void:
 		[3.60, 0.0],
 		[5.80, 0.0],
 	])
+	var hit_track := animation.add_track(Animation.TYPE_METHOD)
+	animation.track_set_path(hit_track, NodePath("."))
+	for impact_time in [2.66, 3.35]:
+		animation.track_insert_key(hit_track, impact_time, {
+			"method": &"emit_normal_hammer_hit",
+			"args": [],
+		})
 
 	var library := AnimationLibrary.new()
 	library.add_animation(WORK_LOOP, animation)
@@ -133,6 +142,10 @@ func add_value_track(animation: Animation, path: NodePath, interpolation: int, k
 func restart_animation() -> void:
 	animation_player.play(WORK_LOOP)
 	animation_player.seek(0.0, true)
+
+
+func emit_normal_hammer_hit() -> void:
+	normal_hammer_hit.emit()
 
 
 func play_upgrade_build() -> void:

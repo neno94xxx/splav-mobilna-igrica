@@ -87,6 +87,8 @@ desktop.ini
 
 # Retired gameplay experiments and assets no longer referenced by the project
 /assets/impact/
+/assets/sounds/Main sailing theme (background music while raft is sailing).wav
+/assets/sounds/Main sailing theme (background music while raft is sailing).wav.import
 /scenes/fat_man_breath.tscn
 /scenes/nerd_hammer_cutout.tscn
 /scripts/fat_man_breath.gd

@@ -1,4 +1,4 @@
-# Bijeg splavom — prvi Godot prototip
+# Raft Escape — Godot igra
 
 Jednostavna igriva verzija ideje za Android igru. Grafika je zasad namjerno nacrtana jednostavnim oblicima kako bismo prvo provjerili je li osnovna petlja zabavna.
 

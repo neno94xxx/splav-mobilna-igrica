@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bqk2psnel2d36"
+path="res://.godot/imported/Game over (end of the round).wav-e53a5cf9617d32b27a2251dbcbc9deca.sample"
+
+[deps]
+
+source_file="res://assets/sounds/Game over (end of the round).wav"
+dest_files=["res://.godot/imported/Game over (end of the round).wav-e53a5cf9617d32b27a2251dbcbc9deca.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2
