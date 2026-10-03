@@ -56,6 +56,9 @@ desktop.ini
 *.bak
 *.swp
 *~
+/.firebase/
+/firebase-debug.log*
+/firepit-log.txt
 
 # Local screenshot from setup/troubleshooting
 /godot.png
