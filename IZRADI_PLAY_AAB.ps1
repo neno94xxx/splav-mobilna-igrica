@@ -1,3 +1,9 @@
+[CmdletBinding()]
+param(
+    [string]$KeystorePath = "",
+    [string]$KeyAlias = "raftescape-upload"
+)
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
@@ -8,8 +14,20 @@ $androidSdk = Join-Path $projectRoot ".tools\android-sdk"
 $gradleHome = Join-Path $projectRoot ".tools\gradle-user"
 $buildDirectory = Join-Path $projectRoot "builds"
 $outputBundle = Join-Path $buildDirectory "raft-escape-play.aab"
-$keystore = "C:\Users\nenom\OneDrive\Documents\RaftEscapeKeys\raftescape-upload.jks"
-$keyAlias = "raftescape-upload"
+$keystore = $KeystorePath
+if ([string]::IsNullOrWhiteSpace($keystore)) {
+    if ($env:RAFT_ESCAPE_KEYSTORE) {
+        $keystore = $env:RAFT_ESCAPE_KEYSTORE
+    } else {
+        $keyBase = if ($env:OneDrive) { $env:OneDrive } else { Join-Path $env:USERPROFILE "OneDrive" }
+        $keystore = Join-Path $keyBase "Documents\RaftEscapeKeys\raftescape-upload.jks"
+    }
+}
+if (-not (Test-Path -LiteralPath $keystore)) {
+    Write-Host "Potreban je postojeci Raft Escape upload kljuc iz sigurnosne kopije." -ForegroundColor Yellow
+    $keystore = (Read-Host "Upisi punu putanju do raftescape-upload.jks").Trim().Trim('"')
+}
+$keyAlias = $KeyAlias
 
 $requiredPaths = @(
     $godot,
@@ -46,7 +64,11 @@ try {
     $env:JAVA_HOME = $javaHome
     $env:ANDROID_HOME = $androidSdk
     $env:ANDROID_SDK_ROOT = $androidSdk
+    $env:ANDROID_USER_HOME = Join-Path $projectRoot ".tools\android-user"
     $env:GRADLE_USER_HOME = $gradleHome
+    $env:TEMP = Join-Path $projectRoot "tmp"
+    $env:TMP = $env:TEMP
+    New-Item -ItemType Directory -Force -Path $env:TEMP, $env:ANDROID_USER_HOME | Out-Null
     $env:GODOT_ANDROID_KEYSTORE_RELEASE_PATH = $keystore
     $env:GODOT_ANDROID_KEYSTORE_RELEASE_USER = $keyAlias
     $env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD = $plainPassword

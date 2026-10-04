@@ -5,13 +5,13 @@ set "GODOT_EXE=%~dp0.tools\godot-4.7.1\Godot_v4.7.1-stable_win64_console.exe"
 set "JAVA_HOME=%~dp0.tools\jdk-17\jdk-17.0.20+8"
 set "ANDROID_HOME=%~dp0.tools\android-sdk"
 set "ANDROID_SDK_ROOT=%ANDROID_HOME%"
-set "PATH=%JAVA_HOME%\bin;%ANDROID_HOME%\platform-tools;%ANDROID_HOME%\build-tools\35.0.1;%PATH%"
+set "PATH=%JAVA_HOME%\bin;%ANDROID_HOME%\platform-tools;%ANDROID_HOME%\build-tools\36.1.0;%PATH%"
 set "APPDATA=%~dp0.tools\runtime-profile\AppData\Roaming"
 set "LOCALAPPDATA=%~dp0.tools\runtime-profile\AppData\Local"
 set "TEMP=%~dp0.tools\runtime-profile\Temp"
 set "TMP=%TEMP%"
 if not exist "%GODOT_EXE%" (
-  echo Godot nije pronaden. Procitaj README.md ili ponovno pokreni postavljanje.
+  echo Godot nije pronaden. Pokreni POSTAVI_PROJEKT.bat.
   pause
   exit /b 1
 )

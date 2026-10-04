@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0IZRADI_PLAY_AAB.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0IZRADI_PLAY_AAB.ps1" %*
 set "BUILD_RESULT=%ERRORLEVEL%"
 echo.
 if not "%BUILD_RESULT%"=="0" (

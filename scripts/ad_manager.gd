@@ -31,11 +31,14 @@ var _startup_consent_flow := false
 var _consent_update_pending := false
 var _consent_form_load_pending := false
 var _consent_form_showing := false
+var _consent_owns_game_pause := false
 var _privacy_options_requested := false
 var _privacy_options_available := false
 
 
 func _ready() -> void:
+	# Native consent callbacks must still run while the game beneath is paused.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	# The plugin is Android-only. Keeping desktop runs inert makes normal Godot
 	# previews and smoke tests behave exactly as they did before AdMob.
 	if not OS.has_feature("android"):
@@ -48,6 +51,10 @@ func _ready() -> void:
 	_admob.android_debug_application_id = ANDROID_APPLICATION_ID
 	_admob.android_real_application_id = ANDROID_APPLICATION_ID
 	_admob.android_real_interstitial_id = ANDROID_REAL_INTERSTITIAL_ID
+	if not _admob.is_real:
+		# AdmobPlugin v7 registers this device automatically in debug mode.
+		# Force EEA only in debug APKs; release builds use the real geography.
+		_admob.debug_geography = ConsentRequestParameters.DebugGeography.EEA
 	_admob.max_interstitial_ad_cache = 1
 	_admob.remove_interstitial_ads_after_displayed = true
 	_admob.initialization_completed.connect(_on_admob_initialized)
@@ -78,6 +85,10 @@ func _start_consent_flow() -> void:
 func _on_consent_info_updated() -> void:
 	_consent_update_pending = false
 	var status := _get_consent_status()
+	if OS.is_debug_build():
+		print("AdMob consent: status=%s, form_available=%s" % [
+			UserConsent.status_to_string(status), _admob.is_consent_form_available()
+		])
 	_update_privacy_options_availability(status)
 	if status == UserConsent.Status.REQUIRED:
 		_show_or_load_consent_form()
@@ -100,12 +111,11 @@ func _on_consent_info_update_failed(error_data) -> void:
 func _show_or_load_consent_form() -> void:
 	if _admob == null or _consent_form_showing or _consent_form_load_pending:
 		return
-	if _admob.is_consent_form_available():
-		_consent_form_showing = true
-		_admob.show_consent_form()
-	else:
-		_consent_form_load_pending = true
-		_admob.load_consent_form()
+	# UMP's isConsentFormAvailable means a form can be downloaded, not that
+	# AdmobPlugin has a loaded ConsentForm. Load a fresh instance for each display
+	# (including revisiting privacy options), then show it in the loaded callback.
+	_consent_form_load_pending = true
+	_admob.load_consent_form()
 
 
 func _on_consent_form_loaded() -> void:
@@ -113,10 +123,12 @@ func _on_consent_form_loaded() -> void:
 	if not _startup_consent_flow and not _privacy_options_requested:
 		return
 	_consent_form_showing = true
+	_pause_game_for_consent()
 	_admob.show_consent_form()
 
 
 func _on_consent_form_failed_to_load(error_data) -> void:
+	_resume_game_after_consent()
 	_consent_form_load_pending = false
 	var was_startup_flow := _startup_consent_flow
 	_startup_consent_flow = false
@@ -131,6 +143,7 @@ func _on_consent_form_failed_to_load(error_data) -> void:
 
 
 func _on_consent_form_dismissed(error_data) -> void:
+	_resume_game_after_consent()
 	var was_privacy_options := _privacy_options_requested
 	_consent_form_showing = false
 	_consent_form_load_pending = false
@@ -144,6 +157,31 @@ func _on_consent_form_dismissed(error_data) -> void:
 	var message := _form_error_message(error_data)
 	if not message.is_empty():
 		push_warning("AdMob consent form dismissed with an error: %s" % message)
+
+
+func _pause_game_for_consent() -> void:
+	if not is_inside_tree() or _consent_owns_game_pause:
+		return
+	# Do not take ownership of a pause that was already active for another reason.
+	if not get_tree().paused:
+		_consent_owns_game_pause = true
+		get_tree().paused = true
+		if OS.is_debug_build():
+			print("AdMob consent: game paused for form")
+
+
+func _resume_game_after_consent() -> void:
+	if not _consent_owns_game_pause:
+		return
+	_consent_owns_game_pause = false
+	if is_inside_tree():
+		get_tree().paused = false
+		if OS.is_debug_build():
+			print("AdMob consent: game resumed after form")
+
+
+func _exit_tree() -> void:
+	_resume_game_after_consent()
 
 
 func _get_consent_status() -> int:
